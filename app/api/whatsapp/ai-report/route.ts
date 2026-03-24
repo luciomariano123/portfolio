@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import YahooFinance from 'yahoo-finance2'
 import { DEFAULT_POSITIONS as _DP } from '@/lib/whatsapp-positions'
+import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+
 type WPos = { ticker: string; tickerYF: string; name: string; quantity: number; ppc: number; account: string }
 const DEFAULT_POSITIONS = _DP as unknown as WPos[]
-import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
-// ── Fetch prices + news ───────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface PriceRow { ticker: string; name: string; price: number; change: number; changePct: number; value: number; cost: number; pnl: number; pnlPct: number }
+interface PriceRow {
+  ticker: string; name: string; price: number; change: number
+  changePct: number; value: number; cost: number; pnl: number; pnlPct: number
+}
+
+// ── Fetch prices + news ───────────────────────────────────────────────────────
 
 async function fetchMarketData() {
   const unique = new Map<string, WPos>()
@@ -23,7 +28,7 @@ async function fetchMarketData() {
   await Promise.allSettled(
     Array.from(unique.values()).map(async (pos) => {
       try {
-        const q = await yf.quote(pos.tickerYF)
+        const q         = await yf.quote(pos.tickerYF)
         const price     = q.regularMarketPrice ?? 0
         const change    = q.regularMarketChange ?? 0
         const changePct = q.regularMarketChangePercent ?? 0
@@ -39,14 +44,14 @@ async function fetchMarketData() {
     })
   )
 
-  // Fetch news for top 5 movers
-  const topMovers = [...priceData].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 5)
-  const news: { ticker: string; title: string; publisher: string }[] = []
+  // News for top movers
+  const topMovers = [...priceData].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 4)
+  const news: { ticker: string; title: string }[] = []
   for (const pos of topMovers) {
     try {
       const res = await yf.search(pos.ticker, { newsCount: 2, quotesCount: 0 })
-      for (const n of (res.news ?? []).slice(0, 2)) {
-        if (n.title) news.push({ ticker: pos.ticker, title: n.title, publisher: (n as { publisher?: string }).publisher ?? '' })
+      for (const n of (res.news ?? []).slice(0, 1)) {
+        if (n.title) news.push({ ticker: pos.ticker, title: n.title })
       }
     } catch { /* skip */ }
   }
@@ -54,69 +59,111 @@ async function fetchMarketData() {
   return { priceData, news }
 }
 
-// ── Build AI prompt ───────────────────────────────────────────────────────────
+// ── Smart summary generator (no API needed) ───────────────────────────────────
 
-function buildPrompt(priceData: PriceRow[], news: { ticker: string; title: string; publisher: string }[]) {
-  const totalValue = priceData.reduce((s, p) => s + p.value, 0)
-  const cashUSD    = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
-  const onValue    = FIXED_INCOME.reduce((s, fi) => s + fi.nominal, 0)
-  const totalComplete = totalValue + cashUSD + onValue
+function generateSummary(priceData: PriceRow[], news: { ticker: string; title: string }[]): string {
+  const now         = new Date()
+  const dateStr     = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires' })
+  const totalCEDEAR = priceData.reduce((s, p) => s + p.value, 0)
+  const cashUSD     = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
+  const onValue     = FIXED_INCOME.reduce((s, fi) => s + fi.nominal, 0)
+  const total       = totalCEDEAR + cashUSD + onValue
 
-  const now = new Date()
-  const ytdBase = HISTORICAL_DATA.filter(d => d.date <= `${now.getFullYear() - 1}-12-31`).at(-1)
-  const ytdPct  = ytdBase ? ((totalComplete - ytdBase.quotaPart) / ytdBase.quotaPart) * 100 : 0
+  const dailyPnl    = priceData.reduce((s, p) => s + p.change * (p.price > 0 ? p.value / p.price : 0), 0)
+  const dailyPnlPct = totalCEDEAR > 0 ? (dailyPnl / (totalCEDEAR - dailyPnl)) * 100 : 0
 
-  const sorted      = [...priceData].sort((a, b) => b.changePct - a.changePct)
-  const gainers     = sorted.filter(p => p.changePct > 0)
-  const losers      = sorted.filter(p => p.changePct < 0).reverse()
-  const dailyPnlUSD = priceData.reduce((s, p) => s + (p.change * (p.value / (p.price || 1))), 0)
+  const ytdBase   = HISTORICAL_DATA.filter(d => d.date <= `${now.getFullYear() - 1}-12-31`).at(-1)
+  const ytdPct    = ytdBase ? ((total - ytdBase.quotaPart) / ytdBase.quotaPart) * 100 : 0
+  const ytdAbs    = ytdBase ? total - ytdBase.quotaPart : 0
 
-  const posTable = sorted.map(p =>
-    `${p.ticker} (${p.name}): precio $${p.price.toFixed(2)}, día ${p.changePct >= 0 ? '+' : ''}${p.changePct.toFixed(2)}%, valor $${Math.round(p.value).toLocaleString()}, P&L total ${p.pnl >= 0 ? '+' : ''}$${Math.round(p.pnl).toLocaleString()} (${p.pnlPct >= 0 ? '+' : ''}${p.pnlPct.toFixed(1)}%)`
-  ).join('\n')
+  const sorted    = [...priceData].sort((a, b) => b.changePct - a.changePct)
+  const gainers   = sorted.filter(p => p.changePct > 0)
+  const losers    = sorted.filter(p => p.changePct < 0).reverse()
 
-  const newsText = news.map(n => `[${n.ticker}] ${n.title}`).join('\n')
+  const fmt       = (n: number) => Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })
+  const fmtPct    = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
+  const sign      = (n: number) => n >= 0 ? '+' : '-'
 
-  return `Sos un analista financiero personal. Redactá un resumen diario de cartera en español rioplatense (tuteo),
-informal pero profesional. Máximo 800 caracteres para WhatsApp. Usá emojis con moderación.
+  // ── Intro con contexto del día ──
+  const dayGood = dailyPnl >= 0
+  const intros = dayGood
+    ? [`Buen ${dateStr.split(',')[0]} para la cartera.`, `El ${dateStr.split(',')[0]} cerró en verde.`, `Jornada positiva hoy.`]
+    : [`El ${dateStr.split(',')[0]} no fue el mejor.`, `Jornada complicada hoy.`, `El mercado presionó un poco hoy.`]
+  const intro = intros[now.getDate() % intros.length]
 
-DATOS DE HOY (${now.toLocaleDateString('es-AR')}):
-Valor total cartera: $${Math.round(totalComplete).toLocaleString()} USD
-  - CEDEARs: $${Math.round(totalValue).toLocaleString()}
-  - Cash USD: $${Math.round(cashUSD).toLocaleString()}
-  - ONs (VN): $${Math.round(onValue).toLocaleString()}
-P&L del día (CEDEARs): ${dailyPnlUSD >= 0 ? '+' : ''}$${Math.round(dailyPnlUSD).toLocaleString()} USD
-YTD ${now.getFullYear()}: ${ytdPct >= 0 ? '+' : ''}${ytdPct.toFixed(2)}%
+  let msg = `📊 Resumen ${dateStr}\n\n`
+  msg += `${intro}\n`
+  msg += `Cartera total: $${fmt(total)} USD\n`
+  msg += `Hoy: ${sign(dailyPnl)}$${fmt(Math.abs(dailyPnl))} (${fmtPct(dailyPnlPct)})\n`
+  msg += `YTD ${now.getFullYear()}: ${sign(ytdAbs)}$${fmt(Math.abs(ytdAbs))} (${fmtPct(ytdPct)})\n`
 
-POSICIONES:
-${posTable}
+  // ── Top gainers ──
+  if (gainers.length > 0) {
+    msg += `\n🚀 Subieron:\n`
+    for (const p of gainers.slice(0, 3)) {
+      const impact = p.change * (p.price > 0 ? p.value / p.price : 0)
+      msg += `${p.ticker} ${fmtPct(p.changePct)} ($${fmt(p.price)}) → ${sign(impact)}$${fmt(Math.abs(impact))}\n`
+    }
+  }
 
-NOTICIAS (en inglés, traducilas y resumilas):
-${newsText || 'Sin noticias disponibles'}
+  // ── Top losers ──
+  if (losers.length > 0) {
+    msg += `\n📉 Bajaron:\n`
+    for (const p of losers.slice(0, 3)) {
+      const impact = p.change * (p.price > 0 ? p.value / p.price : 0)
+      msg += `${p.ticker} ${fmtPct(p.changePct)} ($${fmt(p.price)}) → ${sign(impact)}$${fmt(Math.abs(impact))}\n`
+    }
+  }
 
-INSTRUCCIONES:
-- Mencioná el valor total y el P&L del día
-- Destacá los 2-3 mejores y peores movers con contexto
-- Traducí y resumí las noticias más relevantes al español
-- Si algún activo está muy sobrecomprado o sobrevendido, mencionalo
-- Agregá una observación sobre el contexto macro si corresponde
-- Cerrá con una frase corta de perspectiva
-- NO uses markdown ni asteriscos, texto plano para WhatsApp`
+  // ── Observaciones automáticas ──
+  const obs: string[] = []
+
+  // Posición con mayor P&L total
+  const bestTotal = [...priceData].sort((a, b) => b.pnlPct - a.pnlPct)[0]
+  if (bestTotal && bestTotal.pnlPct > 20)
+    obs.push(`${bestTotal.ticker} sigue siendo la estrella de la cartera con ${fmtPct(bestTotal.pnlPct)} de ganancia total.`)
+
+  // Posición en rojo total
+  const worstTotal = [...priceData].sort((a, b) => a.pnlPct - b.pnlPct)[0]
+  if (worstTotal && worstTotal.pnlPct < -10)
+    obs.push(`${worstTotal.ticker} sigue bajo agua (${fmtPct(worstTotal.pnlPct)} total). Punto para monitorear.`)
+
+  // Alta volatilidad del día
+  const volatile = priceData.filter(p => Math.abs(p.changePct) > 3)
+  if (volatile.length > 1)
+    obs.push(`Día volátil: ${volatile.map(p => p.ticker).join(', ')} con movimientos de más de 3%.`)
+
+  // YTD strong
+  if (ytdPct > 10)
+    obs.push(`YTD muy sólido: ${fmtPct(ytdPct)} en lo que va del año.`)
+
+  if (obs.length > 0) {
+    msg += `\n💡 ${obs[0]}\n`
+  }
+
+  // ── Noticias (en inglés, se presentan tal cual) ──
+  if (news.length > 0) {
+    msg += `\n📰 Noticias:\n`
+    for (const n of news.slice(0, 3)) {
+      msg += `[${n.ticker}] ${n.title.length > 80 ? n.title.slice(0, 80) + '...' : n.title}\n`
+    }
+  }
+
+  msg += `\n— Portfolio App`
+  return msg
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY ?? ''
-  const KAPSO_KEY     = process.env.KAPSO_API_KEY ?? ''
-  const PHONE_ID      = process.env.KAPSO_PHONE_NUMBER_ID ?? ''
-  const CRON_SECRET   = process.env.CRON_SECRET ?? ''
+  const KAPSO_KEY   = process.env.KAPSO_API_KEY ?? ''
+  const PHONE_ID    = process.env.KAPSO_PHONE_NUMBER_ID ?? ''
+  const CRON_SECRET = process.env.CRON_SECRET ?? ''
 
   const body = await req.json().catch(() => ({})) as { secret?: string; recipients?: string[] }
   if (!CRON_SECRET || body.secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!ANTHROPIC_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 })
   if (!KAPSO_KEY || !PHONE_ID) return NextResponse.json({ error: 'Kapso not configured' }, { status: 500 })
 
   const recipients = (
@@ -127,22 +174,9 @@ export async function POST(req: NextRequest) {
 
   if (recipients.length === 0) return NextResponse.json({ error: 'No recipients' }, { status: 400 })
 
-  // Fetch market data
   const { priceData, news } = await fetchMarketData()
+  const summary = generateSummary(priceData, news)
 
-  // Generate AI summary
-  const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY })
-  const prompt = buildPrompt(priceData, news)
-
-  const aiRes = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 600,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const summary = aiRes.content[0].type === 'text' ? aiRes.content[0].text : ''
-
-  // Send via Kapso
   const results = await Promise.allSettled(
     recipients.map(phone =>
       fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${PHONE_ID}/messages`, {
@@ -162,5 +196,5 @@ export async function POST(req: NextRequest) {
   const sent   = results.filter(r => r.status === 'fulfilled').length
   const failed = results.length - sent
 
-  return NextResponse.json({ ok: true, sent, failed, preview: summary.slice(0, 200) })
+  return NextResponse.json({ ok: true, sent, failed, preview: summary.slice(0, 300) })
 }
