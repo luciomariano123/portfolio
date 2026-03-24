@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
 import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA } from '@/lib/portfolio-data'
@@ -9,7 +9,7 @@ import { EvolutionChart } from '@/components/EvolutionChart'
 import { SectorChart } from '@/components/SectorChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
-import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, CheckCircle } from 'lucide-react'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -17,6 +17,28 @@ export default function DashboardPage() {
 
   const { prices, loading, lastUpdated, refresh } = usePrices(allTickers, 60000)
   const { rates } = useDolar()
+
+  const [sending, setSending]   = useState(false)
+  const [sendState, setSendState] = useState<'idle' | 'ok' | 'error'>('idle')
+
+  async function sendAiReport() {
+    setSending(true)
+    setSendState('idle')
+    try {
+      const recipients = JSON.parse(localStorage.getItem('whatsapp_recipients_v1') ?? '[]') as string[]
+      const res = await fetch('/api/whatsapp/ai-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients }),
+      })
+      setSendState(res.ok ? 'ok' : 'error')
+    } catch {
+      setSendState('error')
+    } finally {
+      setSending(false)
+      setTimeout(() => setSendState('idle'), 4000)
+    }
+  }
 
   const stats = useMemo(() => {
     let totalValueUSD = 0
@@ -98,10 +120,23 @@ export default function DashboardPage() {
           )}
           <button
             onClick={refresh}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border border-[var(--app-border)] bg-[var(--card-bg)] text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
           >
             <RefreshCw size={13} />
             Actualizar
+          </button>
+          <button
+            onClick={sendAiReport}
+            disabled={sending || loading}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors disabled:opacity-50
+              bg-emerald-600/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 hover:border-emerald-500/50"
+          >
+            {sending
+              ? <Loader2 size={13} className="animate-spin" />
+              : sendState === 'ok'
+              ? <CheckCircle size={13} />
+              : <Send size={13} />}
+            {sending ? 'Generando...' : sendState === 'ok' ? 'Enviado' : sendState === 'error' ? 'Error' : 'Resumen IA'}
           </button>
         </div>
       </div>
