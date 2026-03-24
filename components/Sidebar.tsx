@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Briefcase, TrendingUp, LineChart, Bell, Settings, ChevronRight, Scale, Landmark, X } from 'lucide-react'
+import { LayoutDashboard, Briefcase, TrendingUp, LineChart, Bell, Settings, ChevronRight, Scale, Landmark, MessageCircle, X } from 'lucide-react'
 import { useAlertBadge } from '@/hooks/useAlerts'
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/rebalanceo', label: 'Rebalanceo', icon: Scale },
   { href: '/analysis', label: 'Análisis', icon: LineChart },
   { href: '/alerts', label: 'Alertas', icon: Bell },
+  { href: '/inbox', label: 'WhatsApp', icon: MessageCircle },
   { href: '/settings', label: 'Configuración', icon: Settings },
 ]
 
