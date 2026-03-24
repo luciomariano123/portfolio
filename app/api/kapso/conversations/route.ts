@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
   const page     = searchParams.get('page') ?? '1'
   const per_page = searchParams.get('per_page') ?? '30'
 
-  // Note: phone_number_id expects a Kapso UUID, not the Meta numeric ID.
-  // Omitting it returns all conversations for the project (fine since we have 1 number).
-  const params = new URLSearchParams({ status, page, per_page })
+  // status='all' is not always supported — omit it to get everything
+  const params = new URLSearchParams({ page, per_page })
+  if (status && status !== 'all') params.set('status', status)
 
   const url = `${BASE}/whatsapp/conversations?${params}`
   console.log('[kapso] fetching:', url)
