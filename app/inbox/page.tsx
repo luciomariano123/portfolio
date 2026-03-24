@@ -264,8 +264,8 @@ export default function InboxPage() {
     if (!search) return true
     const q = search.toLowerCase()
     return (
-      (c.contact.name ?? '').toLowerCase().includes(q) ||
-      c.contact.phone_number.includes(q)
+      convName(c).toLowerCase().includes(q) ||
+      convPhone(c).includes(q)
     )
   })
 
