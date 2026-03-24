@@ -153,8 +153,14 @@ export default function InboxPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/kapso/conversations?status=${filter}&per_page=50`)
-      if (res.status === 500) { setConfigured(false); return }
       const data = await res.json()
+      if (res.status === 500) { setConfigured(false); return }
+      if (!res.ok) {
+        console.error('[inbox] Kapso error:', data)
+        setConversations([])
+        setConfigured(true) // configured, but Kapso returned an error
+        return
+      }
       setConfigured(true)
       setConversations(data.conversations ?? [])
     } catch {
