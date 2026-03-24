@@ -15,6 +15,24 @@ interface PriceRow {
   changePct: number; value: number; cost: number; pnl: number; pnlPct: number
 }
 
+interface NewsItem { ticker: string; title: string; titleEs: string; link: string }
+
+// ── Free Google Translate (no API key needed) ─────────────────────────────────
+
+async function translateToSpanish(text: string): Promise<string> {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=${encodeURIComponent(text)}`
+    const res  = await fetch(url, { signal: AbortSignal.timeout(3000) })
+    const json = await res.json()
+    // Response: [[[translated, original, ...], ...], ...]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parts = (json[0] as any[]).map((s: any) => s[0]).join('')
+    return parts || text
+  } catch {
+    return text // fallback to original if translate fails
+  }
+}
+
 // ── Fetch prices + news ───────────────────────────────────────────────────────
 
 async function fetchMarketData() {
@@ -44,14 +62,18 @@ async function fetchMarketData() {
     })
   )
 
-  // News for top movers
+  // News for top movers — fetch title + link, then translate
   const topMovers = [...priceData].sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 4)
-  const news: { ticker: string; title: string }[] = []
+  const news: NewsItem[] = []
+
   for (const pos of topMovers) {
     try {
       const res = await yf.search(pos.ticker, { newsCount: 2, quotesCount: 0 })
       for (const n of (res.news ?? []).slice(0, 1)) {
-        if (n.title) news.push({ ticker: pos.ticker, title: n.title })
+        if (!n.title) continue
+        const link    = (n as { link?: string }).link ?? ''
+        const titleEs = await translateToSpanish(n.title)
+        news.push({ ticker: pos.ticker, title: n.title, titleEs, link })
       }
     } catch { /* skip */ }
   }
@@ -61,7 +83,7 @@ async function fetchMarketData() {
 
 // ── Smart summary generator (no API needed) ───────────────────────────────────
 
-function generateSummary(priceData: PriceRow[], news: { ticker: string; title: string }[]): string {
+function generateSummary(priceData: PriceRow[], news: NewsItem[]): string {
   const now         = new Date()
   const dateStr     = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires' })
   const totalCEDEAR = priceData.reduce((s, p) => s + p.value, 0)
@@ -141,11 +163,13 @@ function generateSummary(priceData: PriceRow[], news: { ticker: string; title: s
     msg += `\n💡 ${obs[0]}\n`
   }
 
-  // ── Noticias (en inglés, se presentan tal cual) ──
+  // ── Noticias en español + link ──
   if (news.length > 0) {
     msg += `\n📰 Noticias:\n`
-    for (const n of news.slice(0, 3)) {
-      msg += `[${n.ticker}] ${n.title.length > 80 ? n.title.slice(0, 80) + '...' : n.title}\n`
+    for (const n of news.slice(0, 4)) {
+      const title = n.titleEs || n.title
+      msg += `[${n.ticker}] ${title}\n`
+      if (n.link) msg += `${n.link}\n`
     }
   }
 
