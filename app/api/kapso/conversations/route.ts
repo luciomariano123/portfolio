@@ -38,11 +38,13 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const data = JSON.parse(body)
-    const total      = res.headers.get('X-Total') ?? '0'
-    const totalPages = res.headers.get('X-Total-Pages') ?? '1'
+    const json = JSON.parse(body)
+    // Kapso returns { data: [...], meta: { total_count, total_pages, ... } }
+    const conversations = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : [])
+    const total      = json.meta?.total_count ?? conversations.length
+    const totalPages = json.meta?.total_pages ?? 1
 
-    return NextResponse.json({ conversations: Array.isArray(data) ? data : [], total: Number(total), totalPages: Number(totalPages) })
+    return NextResponse.json({ conversations, total, totalPages })
   } catch (err) {
     console.error('[kapso] fetch error:', err)
     return NextResponse.json({ error: 'Network error', detail: String(err) }, { status: 502 })

@@ -14,13 +14,24 @@ interface KapsoContact {
 
 interface KapsoConversation {
   id: string
-  status: 'active' | 'ended'
-  unread_messages_count: number
-  messages_count: number
-  contact: KapsoContact
+  status?: 'active' | 'ended'
+  contact_name?: string
+  phone_number?: string
+  unread_messages_count?: number
+  // nested under kapso
+  kapso?: {
+    contact_name?: string
+    messages_count?: number
+    unread_messages_count?: number
+    last_message_body?: string
+    last_message_timestamp?: string
+    status?: string
+    phone_number?: string
+  }
+  contact?: KapsoContact
   last_message?: { body?: string; created_at: string }
   created_at: string
-  updated_at: string
+  updated_at?: string
 }
 
 interface KapsoMessage {
@@ -49,13 +60,33 @@ function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-function initials(contact: KapsoContact): string {
-  const name = contact.name ?? contact.phone_number
-  return name.slice(0, 2).toUpperCase()
+function convName(conv: KapsoConversation): string {
+  return conv.kapso?.contact_name ?? conv.contact_name ?? conv.contact?.name ?? conv.phone_number ?? 'Desconocido'
 }
 
-function displayName(contact: KapsoContact): string {
-  return contact.name ?? `+${contact.phone_number}`
+function convPhone(conv: KapsoConversation): string {
+  return conv.kapso?.phone_number ?? conv.phone_number ?? conv.contact?.phone_number ?? ''
+}
+
+function convPreview(conv: KapsoConversation): string {
+  return conv.kapso?.last_message_body ?? conv.last_message?.body ?? ''
+}
+
+function convTime(conv: KapsoConversation): string {
+  return conv.kapso?.last_message_timestamp ?? conv.last_message?.created_at ?? conv.updated_at ?? conv.created_at
+}
+
+function convUnread(conv: KapsoConversation): number {
+  return conv.kapso?.unread_messages_count ?? conv.unread_messages_count ?? 0
+}
+
+function convStatus(conv: KapsoConversation): string {
+  return conv.kapso?.status ?? conv.status ?? 'active'
+}
+
+function convInitials(conv: KapsoConversation): string {
+  const name = convName(conv)
+  return name.slice(0, 2).toUpperCase()
 }
 
 // ── Status icon ───────────────────────────────────────────────────────────────
@@ -74,9 +105,7 @@ function ConvItem({ conv, active, onClick }: {
   active: boolean
   onClick: () => void
 }) {
-  const preview = conv.last_message?.body ?? ''
-  const time    = conv.last_message?.created_at ?? conv.updated_at
-
+  const unread = convUnread(conv)
   return (
     <button
       onClick={onClick}
@@ -85,21 +114,19 @@ function ConvItem({ conv, active, onClick }: {
         active && 'bg-indigo-500/10 border-l-2 border-l-indigo-500'
       )}
     >
-      {/* Avatar */}
       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
-        {initials(conv.contact)}
+        {convInitials(conv)}
       </div>
-
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-[var(--app-fg)] truncate">{displayName(conv.contact)}</span>
-          <span className="text-xs text-slate-500 flex-shrink-0">{timeAgo(time)}</span>
+          <span className="text-sm font-medium text-[var(--app-fg)] truncate">{convName(conv)}</span>
+          <span className="text-xs text-slate-500 flex-shrink-0">{timeAgo(convTime(conv))}</span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <span className="text-xs text-slate-400 truncate">{preview || 'Sin mensajes'}</span>
-          {conv.unread_messages_count > 0 && (
+          <span className="text-xs text-slate-400 truncate">{convPreview(conv) || 'Sin mensajes'}</span>
+          {unread > 0 && (
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {conv.unread_messages_count > 9 ? '9+' : conv.unread_messages_count}
+              {unread > 9 ? '9+' : unread}
             </span>
           )}
         </div>
@@ -220,7 +247,7 @@ export default function InboxPage() {
       await fetch('/api/kapso/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: selected.contact.phone_number, text }),
+        body: JSON.stringify({ to: convPhone(selected), text }),
       })
       // Refresh messages
       await fetchMessages(selected)
@@ -273,9 +300,9 @@ export default function InboxPage() {
           <div className="flex items-center gap-2">
             <MessageCircle size={16} className="text-emerald-400" />
             <span className="font-semibold text-[var(--app-fg)] text-sm">WhatsApp</span>
-            {conversations.filter(c => c.unread_messages_count > 0).length > 0 && (
+            {conversations.filter(c => convUnread(c) > 0).length > 0 && (
               <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {conversations.filter(c => c.unread_messages_count > 0).length}
+                {conversations.filter(c => convUnread(c) > 0).length}
               </span>
             )}
           </div>
@@ -349,19 +376,19 @@ export default function InboxPage() {
               <ChevronRight size={16} className="rotate-180" />
             </button>
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {initials(selected.contact)}
+              {convInitials(selected)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--app-fg)] truncate">{displayName(selected.contact)}</p>
-              <p className="text-xs text-slate-500">+{selected.contact.phone_number}</p>
+              <p className="text-sm font-semibold text-[var(--app-fg)] truncate">{convName(selected)}</p>
+              {convPhone(selected) && <p className="text-xs text-slate-500">+{convPhone(selected)}</p>}
             </div>
             <span className={cn(
               'text-xs px-2 py-0.5 rounded-full border',
-              selected.status === 'active'
+              convStatus(selected) === 'active'
                 ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'
                 : 'text-slate-400 bg-slate-400/10 border-slate-400/20'
             )}>
-              {selected.status === 'active' ? 'Activa' : 'Cerrada'}
+              {convStatus(selected) === 'active' ? 'Activa' : 'Cerrada'}
             </span>
           </div>
 
