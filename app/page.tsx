@@ -20,10 +20,12 @@ export default function DashboardPage() {
 
   const [sending, setSending]   = useState(false)
   const [sendState, setSendState] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [sendError, setSendError] = useState('')
 
   async function sendAiReport() {
     setSending(true)
     setSendState('idle')
+    setSendError('')
     try {
       const recipients = JSON.parse(localStorage.getItem('whatsapp_recipients_v1') ?? '[]') as string[]
       const res = await fetch('/api/whatsapp/ai-report', {
@@ -31,12 +33,20 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients }),
       })
-      setSendState(res.ok ? 'ok' : 'error')
-    } catch {
+      const data = await res.json().catch(() => ({})) as { error?: string; preview?: string; sent?: number }
+      if (res.ok) {
+        setSendState('ok')
+        setSendError(`Enviado a ${data.sent ?? 1} destinatario(s)`)
+      } else {
+        setSendState('error')
+        setSendError(data.error ?? `HTTP ${res.status}`)
+      }
+    } catch (e) {
       setSendState('error')
+      setSendError(String(e))
     } finally {
       setSending(false)
-      setTimeout(() => setSendState('idle'), 4000)
+      setTimeout(() => { setSendState('idle'); setSendError('') }, 6000)
     }
   }
 
@@ -139,6 +149,11 @@ export default function DashboardPage() {
             {sending ? 'Generando...' : sendState === 'ok' ? 'Enviado' : sendState === 'error' ? 'Error' : 'Resumen IA'}
           </button>
         </div>
+        {sendError && (
+          <p className={`text-xs mt-1 ${sendState === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>
+            {sendError}
+          </p>
+        )}
       </div>
 
       <SummaryCards
