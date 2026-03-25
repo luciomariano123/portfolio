@@ -63,21 +63,33 @@ async function fetchPrices(): Promise<PriceInfo[]> {
   return results
 }
 
+// ── Free Google Translate ─────────────────────────────────────────────────────
+
+async function translateES(text: string): Promise<string> {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=${encodeURIComponent(text)}`
+    const res  = await fetch(url, { signal: AbortSignal.timeout(3000) })
+    const json = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (json[0] as any[]).map((s: any) => s[0]).join('') || text
+  } catch { return text }
+}
+
 // ── News fetching ────────────────────────────────────────────────────────────
 
 async function fetchNews(tickers: string[]): Promise<string[]> {
   const headlines: string[] = []
-  // Sample a few key tickers to avoid rate limits
   const sample = tickers.slice(0, 5)
   for (const t of sample) {
     try {
       const res = await yf.search(t, { newsCount: 2, quotesCount: 0 })
       for (const n of (res.news ?? []).slice(0, 1)) {
-        if (n.title) headlines.push(`• ${n.title}`)
+        if (!n.title) continue
+        const titleEs = await translateES(n.title)
+        const link    = (n as { link?: string }).link ?? ''
+        headlines.push(`• [${t}] ${titleEs}${link ? '\n  ' + link : ''}`)
       }
-    } catch {
-      // skip
-    }
+    } catch { /* skip */ }
   }
   return headlines.slice(0, 5)
 }
