@@ -28,7 +28,7 @@ export default function DashboardPage() {
     setSendError('')
     try {
       const recipients = JSON.parse(localStorage.getItem('whatsapp_recipients_v1') ?? '[]') as string[]
-      const res = await fetch('/api/whatsapp/ai-report', {
+      const res = await fetch('/api/whatsapp/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients }),
