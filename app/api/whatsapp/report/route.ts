@@ -173,6 +173,8 @@ async function sendWhatsApp(to: string, text: string): Promise<boolean> {
       }),
     }
   )
+  const body = await res.text()
+  console.log(`[whatsapp] to=${to} status=${res.status} body=${body.slice(0, 300)}`)
   return res.ok
 }
 
