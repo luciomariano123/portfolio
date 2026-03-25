@@ -4,7 +4,7 @@ import { DEFAULT_POSITIONS as _DP } from '@/lib/whatsapp-positions'
 
 type WaPosition = { ticker: string; tickerYF: string; name: string; quantity: number; ppc: number; account: string }
 const DEFAULT_POSITIONS = _DP as unknown as WaPosition[]
-import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS, COUPON_SCHEDULE } from '@/lib/portfolio-data'
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
@@ -24,7 +24,12 @@ interface PriceInfo {
   value: number
 }
 
-async function fetchPrices(): Promise<PriceInfo[]> {
+interface FetchPricesResult {
+  prices: PriceInfo[]
+  ccl: number
+}
+
+async function fetchPrices(): Promise<FetchPricesResult> {
   // Deduplicate tickers
   const unique = new Map<string, typeof DEFAULT_POSITIONS[0]>()
   for (const p of DEFAULT_POSITIONS) {
@@ -60,7 +65,21 @@ async function fetchPrices(): Promise<PriceInfo[]> {
     })
   )
 
-  return results
+  // Fetch CCL: PAMP.BA (ARS) / PAMPD.BA (USD)
+  let ccl = 0
+  try {
+    const [pampArs, pampUsd] = await Promise.all([
+      yf.quote('PAMP.BA'),
+      yf.quote('PAMPD.BA'),
+    ])
+    const arsPrice = pampArs.regularMarketPrice ?? 0
+    const usdPrice = pampUsd.regularMarketPrice ?? 0
+    if (usdPrice > 0) ccl = arsPrice / usdPrice
+  } catch {
+    // fallback ccl stays 0
+  }
+
+  return { prices: results, ccl }
 }
 
 // ── Free Google Translate ─────────────────────────────────────────────────────
@@ -96,7 +115,22 @@ async function fetchNews(tickers: string[]): Promise<string[]> {
 
 // ── Message formatter ────────────────────────────────────────────────────────
 
-function formatReport(prices: PriceInfo[]): string {
+const SECTOR_MAP: Record<string, string> = {
+  'AMZN': 'Tecnología', 'MELI': 'Tecnología', 'META': 'Tecnología', 'MSFT': 'Tecnología',
+  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'SPY': 'ETF',
+  'PAMP': 'Energía', 'TGSU2': 'Energía', 'YPF': 'Energía',
+  'KO': 'Consumo', 'MCD': 'Consumo', 'PEP': 'Consumo',
+}
+
+interface FormatReportOptions {
+  ccl?: number
+  firedAlerts?: string[]
+  isWeekly?: boolean
+}
+
+function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): string {
+  const { ccl = 0, firedAlerts = [], isWeekly = false } = options
+
   const total = prices.reduce((s, p) => s + p.value, 0)
 
   // Cash USD
@@ -121,6 +155,16 @@ function formatReport(prices: PriceInfo[]): string {
   const prevPct = prevSnapshot ? ((totalComplete - prevSnapshot.quotaPart) / prevSnapshot.quotaPart) * 100 : 0
   const prevAbs = prevSnapshot ? totalComplete - prevSnapshot.quotaPart : 0
 
+  // Week-over-week (for weekly report)
+  const sevenDaysAgo = new Date(now)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
+  const weekOldSnapshot = HISTORICAL_DATA
+    .filter(d => d.date <= sevenDaysAgoStr)
+    .at(-1)
+  const weekPct = weekOldSnapshot ? ((totalComplete - weekOldSnapshot.quotaPart) / weekOldSnapshot.quotaPart) * 100 : 0
+  const weekAbs = weekOldSnapshot ? totalComplete - weekOldSnapshot.quotaPart : 0
+
   // Sort by daily change
   const sorted = [...prices].sort((a, b) => b.changePct - a.changePct)
   const top3up   = sorted.filter(p => p.changePct > 0).slice(0, 3)
@@ -134,7 +178,14 @@ function formatReport(prices: PriceInfo[]): string {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires'
   })
 
-  let msg = `📊 *Reporte de Cartera*\n`
+  let msg = ''
+
+  // Weekly prefix
+  if (isWeekly) {
+    msg += `📅 *RESUMEN SEMANAL*\n`
+  }
+
+  msg += `📊 *Reporte de Cartera*\n`
   msg += `📅 ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}\n\n`
 
   msg += `💼 *Valor Total: $${fmt(totalComplete)}*\n`
@@ -142,12 +193,24 @@ function formatReport(prices: PriceInfo[]): string {
   msg += `  ├ Cash USD:  $${fmt(cashUSD)}\n`
   msg += `  └ ONs (VN):  $${fmt(onValue)}\n\n`
 
+  // CCL Implícito
+  if (ccl > 0) {
+    const cclFmt = ccl.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    msg += `💱 CCL Implícito: $${cclFmt}\n\n`
+  }
+
   if (prevSnapshot) {
     msg += `📈 *vs último snapshot* (${prevSnapshot.date})\n`
     msg += `  ${prevAbs >= 0 ? '🟢' : '🔴'} ${fmtSign(prevAbs)} (${fmtPct(prevPct)})\n\n`
   }
 
   msg += `📆 *YTD ${now.getFullYear()}*: ${fmtSign(ytdAbs)} (${fmtPct(ytdPct)})\n\n`
+
+  // Week-over-week section (only in weekly mode)
+  if (isWeekly && weekOldSnapshot) {
+    msg += `📊 *Variación semanal*\n`
+    msg += `  ${weekAbs >= 0 ? '🟢' : '🔴'} ${fmtSign(weekAbs)} (${fmtPct(weekPct)})\n\n`
+  }
 
   if (top3up.length) {
     msg += `🚀 *Mejores hoy*\n`
@@ -158,6 +221,49 @@ function formatReport(prices: PriceInfo[]): string {
   if (top3down.length) {
     msg += `📉 *Peores hoy*\n`
     for (const p of top3down) msg += `  🔴 ${p.ticker} ${fmtPct(p.changePct)}\n`
+    msg += '\n'
+  }
+
+  // Distribución sectorial
+  const sectorValues: Record<string, number> = {}
+  for (const p of prices) {
+    const sector = SECTOR_MAP[p.ticker] ?? 'Otro'
+    sectorValues[sector] = (sectorValues[sector] ?? 0) + p.value
+  }
+  const totalCedears = prices.reduce((s, p) => s + p.value, 0)
+  if (totalCedears > 0) {
+    const sectorParts = Object.entries(sectorValues)
+      .sort((a, b) => b[1] - a[1])
+      .map(([sec, val]) => `${sec} ${Math.round((val / totalCedears) * 100)}%`)
+    msg += `📊 Sectores: ${sectorParts.join(' | ')}\n\n`
+  }
+
+  // Próximos cupones ONs (next 45 days)
+  const today = now.toISOString().slice(0, 10)
+  const in45 = new Date(now)
+  in45.setDate(in45.getDate() + 45)
+  const in45Str = in45.toISOString().slice(0, 10)
+  const upcomingCoupons = COUPON_SCHEDULE.filter(
+    c => !c.paid && c.date >= today && c.date <= in45Str
+  ).sort((a, b) => a.date.localeCompare(b.date))
+
+  if (upcomingCoupons.length > 0) {
+    msg += `🏦 *Próximos cupones (45 días)*\n`
+    for (const c of upcomingCoupons) {
+      const [year, month, day] = c.date.split('-')
+      const dateLabel = `${day}/${month}`
+      const amtFmt = c.amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+      msg += `  • ${dateLabel} ${c.onName}: +$${amtFmt}\n`
+    }
+    msg += '\n'
+  }
+
+  // Fired alerts
+  if (firedAlerts.length > 0) {
+    msg += `🔔 *Alertas disparadas:*\n`
+    for (const alert of firedAlerts) {
+      msg += `  • ${alert}\n`
+    }
     msg += '\n'
   }
 
@@ -194,7 +300,7 @@ async function sendWhatsApp(to: string, text: string): Promise<boolean> {
 
 export async function POST(req: NextRequest) {
   // Auth: cron uses ?secret=..., manual calls pass it in body
-  const { secret, recipients: bodyRecipients } = await req.json().catch(() => ({} as Record<string, unknown>))
+  const { secret, recipients: bodyRecipients, firedAlerts } = await req.json().catch(() => ({} as Record<string, unknown>))
 
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -215,11 +321,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No recipients configured' }, { status: 400 })
   }
 
+  const isWeekly = new Date().getDay() === 5
+
   // Generate report
-  const prices = await fetchPrices()
+  const { prices, ccl } = await fetchPrices()
   const news   = await fetchNews(prices.map(p => p.ticker))
 
-  let message = formatReport(prices)
+  const alerts = Array.isArray(firedAlerts) ? (firedAlerts as string[]) : []
+
+  let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly })
   if (news.length > 0) {
     message += `\n\n📰 *Noticias*\n${news.join('\n')}`
   }
@@ -257,10 +367,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No recipients configured. Set KAPSO_RECIPIENT_PHONES env var.' }, { status: 400 })
   }
 
-  const prices = await fetchPrices()
+  const isWeekly = new Date().getDay() === 5
+
+  const { prices, ccl } = await fetchPrices()
   const news   = await fetchNews(prices.map(p => p.ticker))
 
-  let message = formatReport(prices)
+  let message = formatReport(prices, { ccl, isWeekly })
   if (news.length > 0) {
     message += `\n\n📰 *Noticias*\n${news.join('\n')}`
   }
