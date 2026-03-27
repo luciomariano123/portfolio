@@ -54,9 +54,9 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64, mimeType }),
         })
-        const data = await res.json() as { trades?: ParsedTrade[]; error?: string }
+        const data = await res.json() as { trades?: ParsedTrade[]; error?: string; detail?: string; raw?: string }
         if (!res.ok || !data.trades) {
-          setErrorMsg(data.error ?? `Error ${res.status}`)
+          setErrorMsg(data.detail ?? data.raw ?? data.error ?? `Error ${res.status}`)
           setStep('error')
           return
         }
@@ -154,7 +154,7 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
             <div className="flex flex-col items-center gap-3 py-8">
               <AlertCircle size={32} className="text-red-400" />
               <p className="text-sm font-medium text-red-400">Error al procesar la imagen</p>
-              <p className="text-xs text-slate-400 text-center">{errorMsg}</p>
+              <p className="text-xs text-slate-400 text-center max-h-32 overflow-y-auto break-all px-2">{errorMsg}</p>
               <button
                 onClick={() => { setStep('upload'); setPreview(null) }}
                 className="mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-lg transition-colors"
