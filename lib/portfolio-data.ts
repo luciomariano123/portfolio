@@ -108,8 +108,8 @@ export const CASH_POSITIONS: CashPosition[] = [
 // nominal = face value in USD; coupon = nominal × rate/2 per semi-annual payment
 // onTicker = BYMA USD ticker (D-class, e.g. TTC9D.BA) for live price fetching
 export const FIXED_INCOME: FixedIncomePosition[] = [
-  { name: 'ON TEC C9',   onTicker: 'TTC9D.BA', nominal: 7100,  rate: 6.80, account: 'Lucio', maturity: '2029-10-24' },
-  { name: 'ON PAE C36',  onTicker: 'PN36D.BA',  nominal: 30000, rate: 6.80, account: 'Lucio', maturity: '2026-11-13' },
+  { name: 'ON TEC C9',   onTicker: 'TTC9D.BA', nominal: 7100,  rate: 6.80, account: 'Agro',  maturity: '2029-10-24' },
+  { name: 'ON PAE C36',  onTicker: 'PN36D.BA',  nominal: 30000, rate: 6.80, account: 'Agro',  maturity: '2026-11-13' },
   { name: 'ON IRSA C23', onTicker: 'IRCOD.BA',  nominal: 29565, rate: 7.25, account: 'Agro',  maturity: '2029-10-23' },
 ]
 

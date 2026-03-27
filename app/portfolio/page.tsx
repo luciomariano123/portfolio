@@ -256,7 +256,9 @@ export default function PortfolioPage() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 mb-1">Valor total (USD)</p>
             {(() => {
-              const onValue = FIXED_INCOME.reduce((s, f) => s + f.nominal, 0)
+              const onValue = FIXED_INCOME
+                .filter(f => filter === 'all' || f.account === filter)
+                .reduce((s, f) => s + f.nominal, 0)
               const displayTotal = summary.totalValue + cashForFilter + onValue
               return (
                 <>
@@ -264,7 +266,7 @@ export default function PortfolioPage() {
                   <p className="text-xs text-slate-500 font-mono mt-0.5">
                     CEDEARs {formatCurrency(summary.totalValue)}
                     {cashForFilter > 0 && ` · Cash ${formatCurrency(cashForFilter)}`}
-                    {` · ONs ${formatCurrency(onValue)}`}
+                    {onValue > 0 && ` · ONs ${formatCurrency(onValue)}`}
                   </p>
                 </>
               )
@@ -401,6 +403,39 @@ export default function PortfolioPage() {
                       </tr>
                     )
                   })}
+                  {/* ── ONs rows ── */}
+                  {FIXED_INCOME
+                    .filter(f => filter === 'all' || f.account === filter)
+                    .map(f => (
+                      <tr key={f.onTicker} className="hover:bg-slate-700/20 transition-colors border-t border-slate-600/40">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-amber-400">ON</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-100">{f.name}</p>
+                              <p className="text-xs text-slate-500">{f.account} · vto {new Date(f.maturity).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                            Renta Fija
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-400 text-xs">{f.rate}%</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">{formatCurrency(f.nominal)}</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3" />
+                      </tr>
+                    ))
+                  }
                   {/* ── LIQUIDEZ row ── */}
                   {(filter === 'Lucio' || filter === 'Agro' || filter === 'all') && (() => {
                     const accts: ('Lucio' | 'Agro')[] = filter === 'all' ? ['Lucio', 'Agro'] : [filter as 'Lucio' | 'Agro']
