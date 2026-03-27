@@ -20,19 +20,32 @@ type Range = '1M' | '3M' | '6M' | 'YTD' | '1A' | 'TODO'
 const RANGES: Range[] = ['1M', '3M', '6M', 'YTD', '1A', 'TODO']
 
 function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
-  const now = new Date(data[data.length - 1].date)
-  const cutoff = new Date(now)
+  if (range === 'TODO') return data
 
+  // Use the last data point's date as reference
+  const lastDate = data[data.length - 1].date  // 'YYYY-MM-DD'
+  const year = parseInt(lastDate.slice(0, 4))
+
+  // Compute cutoff as a YYYY-MM-DD string (avoids timezone issues with Date arithmetic)
+  let cutoff: string
   switch (range) {
-    case '1M': cutoff.setMonth(cutoff.getMonth() - 1); break
-    case '3M': cutoff.setMonth(cutoff.getMonth() - 3); break
-    case '6M': cutoff.setMonth(cutoff.getMonth() - 6); break
-    case 'YTD': cutoff.setFullYear(cutoff.getFullYear() - 1); cutoff.setMonth(11); cutoff.setDate(31); break
-    case '1A': cutoff.setFullYear(cutoff.getFullYear() - 1); break
-    case 'TODO': return data
+    case 'YTD': cutoff = `${year - 1}-12-31`; break
+    case '1A':  cutoff = `${year - 1}-${lastDate.slice(5)}`; break
+    case '6M': {
+      const d = new Date(lastDate + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 6)
+      cutoff = d.toISOString().slice(0, 10); break
+    }
+    case '3M': {
+      const d = new Date(lastDate + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 3)
+      cutoff = d.toISOString().slice(0, 10); break
+    }
+    case '1M': {
+      const d = new Date(lastDate + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1)
+      cutoff = d.toISOString().slice(0, 10); break
+    }
   }
 
-  return data.filter(d => new Date(d.date) >= cutoff)
+  return data.filter(d => d.date >= cutoff)
 }
 
 interface CustomTooltipProps {
