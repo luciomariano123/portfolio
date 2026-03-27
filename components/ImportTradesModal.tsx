@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Camera, Loader2, CheckCircle, AlertCircle, Plus, Minus } from 'lucide-react'
 import { EditablePosition } from '@/lib/positions-store'
 import { KNOWN_TICKERS } from '@/lib/positions-store'
@@ -25,6 +25,17 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
   const [errorMsg, setErrorMsg] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Paste support (Ctrl+V)
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      if (step !== 'upload') return
+      const item = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith('image/'))
+      if (item) handleFile(item.getAsFile()!)
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [step])
 
   async function handleFile(file: File) {
     setPreview(URL.createObjectURL(file))
@@ -109,6 +120,8 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
               />
               <div
                 onClick={() => inputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
                 className="border-2 border-dashed border-slate-600 hover:border-indigo-500 rounded-xl p-10 flex flex-col items-center gap-3 cursor-pointer transition-colors group"
               >
                 <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
@@ -116,7 +129,7 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium text-slate-200">Subir screenshot del broker</p>
-                  <p className="text-xs text-slate-500 mt-1">Arrastrá o hacé clic — JPG, PNG, WEBP</p>
+                  <p className="text-xs text-slate-500 mt-1">Hacé clic, arrastrá, o <kbd className="px-1 py-0.5 bg-slate-700 rounded text-slate-300 font-mono">Ctrl+V</kbd> para pegar</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full">
                   <Upload size={12} />
