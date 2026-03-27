@@ -10,6 +10,7 @@ import { SectorChart } from '@/components/SectorChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, CheckCircle } from 'lucide-react'
+import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -28,10 +29,12 @@ export default function DashboardPage() {
     setSendError('')
     try {
       const recipients = JSON.parse(localStorage.getItem('whatsapp_recipients_v1') ?? '[]') as string[]
+      const recentChanges = loadRecentChanges(7)
+      const changesText = formatChangesForMessage(recentChanges)
       const res = await fetch('/api/whatsapp/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients }),
+        body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients, changesText }),
       })
       const data = await res.json().catch(() => ({})) as { error?: string; preview?: string; sent?: number }
       if (res.ok) {

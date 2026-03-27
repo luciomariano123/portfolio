@@ -126,10 +126,11 @@ interface FormatReportOptions {
   ccl?: number
   firedAlerts?: string[]
   isWeekly?: boolean
+  changesText?: string
 }
 
 function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): string {
-  const { ccl = 0, firedAlerts = [], isWeekly = false } = options
+  const { ccl = 0, firedAlerts = [], isWeekly = false, changesText = '' } = options
 
   const total = prices.reduce((s, p) => s + p.value, 0)
 
@@ -267,6 +268,11 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
     msg += '\n'
   }
 
+  // Recent portfolio changes (passed from client-side localStorage)
+  if (changesText) {
+    msg += `\n${changesText}\n\n`
+  }
+
   msg += `_Enviado automáticamente · Portfolio App_`
   return msg
 }
@@ -300,7 +306,7 @@ async function sendWhatsApp(to: string, text: string): Promise<boolean> {
 
 export async function POST(req: NextRequest) {
   // Auth: cron uses ?secret=..., manual calls pass it in body
-  const { secret, recipients: bodyRecipients, firedAlerts } = await req.json().catch(() => ({} as Record<string, unknown>))
+  const { secret, recipients: bodyRecipients, firedAlerts, changesText } = await req.json().catch(() => ({} as Record<string, unknown>))
 
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -328,8 +334,9 @@ export async function POST(req: NextRequest) {
   const news   = await fetchNews(prices.map(p => p.ticker))
 
   const alerts = Array.isArray(firedAlerts) ? (firedAlerts as string[]) : []
+  const changesStr = typeof changesText === 'string' ? changesText : ''
 
-  let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly })
+  let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly, changesText: changesStr })
   if (news.length > 0) {
     message += `\n\n📰 *Noticias*\n${news.join('\n')}`
   }
