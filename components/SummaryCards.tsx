@@ -74,9 +74,13 @@ export function SummaryCards({
       iconColor: inceptionPct >= 0 ? 'text-emerald-400' : 'text-red-400',
       iconBg: inceptionPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
       value: loading ? null : (inceptionPnl >= 0 ? '+' : '') + formatCurrency(inceptionPnl),
-      sub: loading ? null : `${formatPercent(inceptionPct)} vs $200k inicial · ${yearBreakdown}`,
+      sub: loading ? null : `${formatPercent(inceptionPct)} vs $200k inicial`,
       valueColor: getPnlColor(inceptionPnl),
       highlight: false,
+      yearChips: loading ? null : years.map(y => {
+        const { pct } = yearPnl(y, totalValueUSD)
+        return { year: y, pct }
+      }),
     },
     {
       title: 'Variación del Día',
@@ -118,6 +122,22 @@ export function SummaryCards({
                   <div className="h-4 w-24 bg-slate-700/60 rounded animate-pulse mt-1" />
                 ) : (
                   <p className="text-xs text-slate-500 mt-1">{card.sub}</p>
+                )}
+                {'yearChips' in card && card.yearChips && (
+                  <div className="flex gap-1.5 mt-2 flex-wrap">
+                    {card.yearChips.map(({ year, pct }: { year: number; pct: number }) => (
+                      <span
+                        key={year}
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${
+                          pct >= 0
+                            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                            : 'text-red-400 bg-red-500/10 border-red-500/20'
+                        }`}
+                      >
+                        {year} {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className={`w-10 h-10 rounded-xl ${card.iconBg} flex items-center justify-center flex-shrink-0 ml-3`}>
