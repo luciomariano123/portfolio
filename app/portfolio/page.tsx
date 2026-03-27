@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
 import { EditPositionModal } from '@/components/EditPositionModal'
+import { ImportTradesModal } from '@/components/ImportTradesModal'
 import { EditablePosition, loadCash, saveCash, AccountCash } from '@/lib/positions-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +13,7 @@ import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-sto
 import { SECTOR_COLORS } from '@/lib/portfolio-data'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
-  TrendingUp, TrendingDown, Minus, AlertCircle, Check,
+  TrendingUp, TrendingDown, Minus, AlertCircle, Check, FileImage,
 } from 'lucide-react'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -87,6 +88,7 @@ export default function PortfolioPage() {
   const [tab, setTab] = useState<TabType>('positions')
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<EditablePosition | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   // Liquidez (cash) per account — persisted in localStorage
   const [cash, setCash] = useState<AccountCash>({ Lucio: 0, Agro: 0 })
@@ -228,6 +230,15 @@ export default function PortfolioPage() {
           )}
           <button onClick={refresh} className="p-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200">
             <RefreshCw size={13} />
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            disabled={filter === 'all'}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-sm font-medium transition-colors"
+            title={filter === 'all' ? 'Seleccioná Lucio o Agro para importar' : 'Importar boletos desde imagen'}
+          >
+            <FileImage size={14} />
+            Importar
           </button>
           <button
             onClick={() => { setEditTarget(null); setShowModal(true) }}
@@ -549,7 +560,34 @@ export default function PortfolioPage() {
         </CardContent>
       </Card>
 
-      {/* Modal */}
+      {/* Import trades modal */}
+      {showImport && filter !== 'all' && (
+        <ImportTradesModal
+          account={filter as 'Lucio' | 'Agro'}
+          onApply={(mapped) => {
+            for (const { trade, pos } of mapped) {
+              const existing = positions.find(p => p.ticker === pos.ticker && p.account === pos.account)
+              if (existing) {
+                if (trade.tipo === 'COMPRA') {
+                  // Weighted average PPC
+                  const totalQty = existing.quantity + pos.quantity
+                  const newPpc = (existing.quantity * existing.ppc + pos.quantity * pos.ppc) / totalQty
+                  updatePosition(existing.ticker, existing.account, { quantity: totalQty, ppc: newPpc })
+                } else {
+                  // Sale: reduce quantity
+                  const newQty = Math.max(0, existing.quantity - pos.quantity)
+                  updatePosition(existing.ticker, existing.account, { quantity: newQty })
+                }
+              } else if (trade.tipo === 'COMPRA') {
+                addPosition(pos)
+              }
+            }
+          }}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {/* Edit/Add modal */}
       {showModal && (
         <EditPositionModal
           initial={editTarget ?? undefined}
