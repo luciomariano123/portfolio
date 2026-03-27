@@ -26,11 +26,24 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
     t.name.toLowerCase().includes(search.toLowerCase())
   ).slice(0, 8)
 
+  // Evaluate simple arithmetic: "1500-322", "3091+500", "760*2", etc.
+  function evalExpr(expr: string): number {
+    try {
+      const sanitized = expr.replace(/[^0-9+\-*/().]/g, '')
+      // eslint-disable-next-line no-new-func
+      const result = new Function('return ' + sanitized)() as number
+      return isFinite(result) ? result : NaN
+    } catch { return NaN }
+  }
+
+  const resolvedQty = evalExpr(quantity)
+  const qtyDisplay  = !isNaN(resolvedQty) && quantity.match(/[+\-*/]/) ? resolvedQty : null
+
   function handleSubmit() {
     if (!selected) { setError('Seleccioná un ticker'); return }
-    const qty = parseFloat(quantity)
+    const qty = evalExpr(quantity)
     const price = parseFloat(ppc)
-    if (!qty || qty <= 0) { setError('Ingresá cantidad válida'); return }
+    if (!qty || qty <= 0 || isNaN(qty)) { setError('Ingresá cantidad válida'); return }
     if (!price || price <= 0) { setError('Ingresá PPC válido'); return }
 
     onSave({
@@ -108,17 +121,19 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
               Cantidad (láminas)
             </label>
             <input
-              type="number"
-              min="0"
-              step="1"
+              type="text"
+              inputMode="decimal"
               className="w-full rounded-lg px-3 py-2.5 text-sm bg-slate-700 border border-slate-600 text-slate-100 focus:outline-none focus:border-indigo-500"
-              placeholder="0"
+              placeholder="ej: 1500-322"
               value={quantity}
               onChange={e => setQuantity(e.target.value)}
             />
-            {selected && quantity && (
-              <p className="text-xs text-slate-500 mt-1">
-                = {(parseFloat(quantity) / selected.ratio).toFixed(2)} ADRs
+            {qtyDisplay !== null && (
+              <p className="text-xs text-indigo-400 mt-1 font-medium">= {Math.round(qtyDisplay).toLocaleString()} láminas</p>
+            )}
+            {selected && quantity && !isNaN(resolvedQty) && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                = {(resolvedQty / selected.ratio).toFixed(2)} ADRs
               </p>
             )}
           </div>
@@ -181,7 +196,7 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
             <p className="text-xs text-slate-400">
               Costo total:{' '}
               <span className="text-slate-100 font-mono font-medium">
-                ${((parseFloat(quantity) / selected.ratio) * parseFloat(ppc)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                ${((resolvedQty / selected.ratio) * parseFloat(ppc)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
               </span>
             </p>
           </div>
