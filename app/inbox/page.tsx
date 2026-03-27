@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MessageCircle, RefreshCw, Send, CheckCheck, Check, Clock, Search, ChevronRight, Loader2 } from 'lucide-react'
+import { MessageCircle, RefreshCw, Send, CheckCheck, Check, Clock, Search, ChevronRight, Loader2, TrendingUp, MessageSquarePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { loadRecentChanges, formatChangesForMessage, type PortfolioChange } from '@/lib/changes-store'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,16 @@ export default function InboxPage() {
   const [reply, setReply]                   = useState('')
   const [sending, setSending]               = useState(false)
   const [configured, setConfigured]         = useState(true)
+  const [recentChanges, setRecentChanges]   = useState<PortfolioChange[]>([])
+  const [showComment, setShowComment]       = useState(false)
+  const [comment, setComment]               = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // ── Load recent portfolio changes ────────────────────────────────────────
+
+  useEffect(() => {
+    setRecentChanges(loadRecentChanges(7))
+  }, [])
 
   // ── Fetch conversations ──────────────────────────────────────────────────
 
@@ -226,10 +236,21 @@ export default function InboxPage() {
 
   // ── Send reply ───────────────────────────────────────────────────────────
 
+  function insertChanges() {
+    const formatted = formatChangesForMessage(recentChanges)
+    if (!formatted) return
+    setReply(prev => prev ? `${formatted}\n\n${prev}` : formatted)
+  }
+
   async function sendReply() {
     if (!reply.trim() || !selected || sending) return
-    const text = reply.trim()
+    let text = reply.trim()
+    if (comment.trim()) {
+      text = `${text}\n\n💬 *Motivo:* ${comment.trim()}`
+    }
     setReply('')
+    setComment('')
+    setShowComment(false)
     setSending(true)
 
     // Optimistic
@@ -407,25 +428,73 @@ export default function InboxPage() {
           </div>
 
           {/* Reply box */}
-          <div className="flex items-end gap-2 px-4 py-3 border-t border-[var(--app-border)] bg-[var(--sidebar-bg)] flex-shrink-0">
-            <textarea
-              rows={1}
-              placeholder="Escribir mensaje..."
-              value={reply}
-              onChange={e => setReply(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() }
-              }}
-              className="flex-1 resize-none rounded-xl px-3 py-2 text-sm bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--app-fg)] placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-h-32"
-              style={{ minHeight: 38 }}
-            />
-            <button
-              onClick={sendReply}
-              disabled={!reply.trim() || sending}
-              className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors"
-            >
-              {sending ? <Loader2 size={15} className="animate-spin text-white" /> : <Send size={15} className="text-white" />}
-            </button>
+          <div className="flex flex-col gap-2 px-4 py-3 border-t border-[var(--app-border)] bg-[var(--sidebar-bg)] flex-shrink-0">
+            {/* Portfolio changes chip */}
+            {recentChanges.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={insertChanges}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 transition-colors"
+                >
+                  <TrendingUp size={11} />
+                  Incluir cambios en cartera ({recentChanges.length})
+                </button>
+              </div>
+            )}
+
+            {/* Comment field */}
+            {showComment && (
+              <div className="flex items-start gap-2">
+                <textarea
+                  rows={1}
+                  placeholder="Motivo del cambio (ej: bajé YPF porque cayó el petróleo)..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  className="flex-1 resize-none rounded-xl px-3 py-2 text-sm bg-[var(--app-bg)] border border-indigo-500/30 text-[var(--app-fg)] placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-h-24"
+                  style={{ minHeight: 36 }}
+                />
+                <button
+                  onClick={() => { setShowComment(false); setComment('') }}
+                  className="mt-1.5 p-1 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Main input row */}
+            <div className="flex items-end gap-2">
+              <textarea
+                rows={1}
+                placeholder="Escribir mensaje..."
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() }
+                }}
+                className="flex-1 resize-none rounded-xl px-3 py-2 text-sm bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--app-fg)] placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-h-32"
+                style={{ minHeight: 38 }}
+              />
+              <button
+                onClick={() => setShowComment(v => !v)}
+                title="Agregar comentario / motivo"
+                className={cn(
+                  'w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors',
+                  showComment
+                    ? 'bg-indigo-600 border-indigo-500 text-white'
+                    : 'bg-[var(--app-bg)] border-[var(--app-border)] text-slate-400 hover:text-slate-200 hover:border-slate-500'
+                )}
+              >
+                <MessageSquarePlus size={15} />
+              </button>
+              <button
+                onClick={sendReply}
+                disabled={!reply.trim() || sending}
+                className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors"
+              >
+                {sending ? <Loader2 size={15} className="animate-spin text-white" /> : <Send size={15} className="text-white" />}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
