@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
 import { EditPositionModal } from '@/components/EditPositionModal'
-import { EditablePosition } from '@/lib/positions-store'
+import { EditablePosition, loadCash, saveCash, AccountCash } from '@/lib/positions-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
@@ -12,7 +12,7 @@ import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-sto
 import { SECTOR_COLORS } from '@/lib/portfolio-data'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
-  TrendingUp, TrendingDown, Minus, AlertCircle,
+  TrendingUp, TrendingDown, Minus, AlertCircle, Check,
 } from 'lucide-react'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -87,6 +87,30 @@ export default function PortfolioPage() {
   const [tab, setTab] = useState<TabType>('positions')
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<EditablePosition | null>(null)
+
+  // Liquidez (cash) per account — persisted in localStorage
+  const [cash, setCash] = useState<AccountCash>({ Lucio: 0, Agro: 0 })
+  const [editingCash, setEditingCash] = useState<'Lucio' | 'Agro' | null>(null)
+  const [cashInput, setCashInput] = useState('')
+  useEffect(() => { setCash(loadCash()) }, [])
+
+  function startEditCash(account: 'Lucio' | 'Agro') {
+    setEditingCash(account)
+    setCashInput(cash[account].toString())
+  }
+  function commitCash() {
+    if (!editingCash) return
+    const val = parseFloat(cashInput)
+    const updated = { ...cash, [editingCash]: isNaN(val) ? 0 : val }
+    setCash(updated)
+    saveCash(updated)
+    setEditingCash(null)
+  }
+
+  // Cash shown for current filter
+  const cashForFilter: number = filter === 'all'
+    ? cash.Lucio + cash.Agro
+    : filter === 'Lucio' ? cash.Lucio : cash.Agro
 
   const displayPositions = useMemo(() => {
     if (filter === 'all') return consolidated
@@ -221,7 +245,10 @@ export default function PortfolioPage() {
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 mb-1">Valor total (USD)</p>
             <p className="text-base font-bold font-mono truncate text-slate-100">{formatCurrency(totalPortfolio)}</p>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">CEDEARs: {formatCurrency(summary.totalValue)}</p>
+            <p className="text-xs text-slate-500 font-mono mt-0.5">
+              CEDEARs: {formatCurrency(summary.totalValue)}
+              {cashForFilter > 0 && ` + ${formatCurrency(cashForFilter)} cash`}
+            </p>
           </CardContent>
         </Card>
         {[
@@ -354,6 +381,80 @@ export default function PortfolioPage() {
                       </tr>
                     )
                   })}
+                  {/* ── LIQUIDEZ row ── */}
+                  {(filter === 'Lucio' || filter === 'Agro' || filter === 'all') && (() => {
+                    const accts: ('Lucio' | 'Agro')[] = filter === 'all' ? ['Lucio', 'Agro'] : [filter as 'Lucio' | 'Agro']
+                    return accts.map(acct => (
+                      <tr key={`cash_${acct}`} className="hover:bg-slate-700/20 transition-colors group border-t border-slate-600/40">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-slate-600/60 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-slate-300">$</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-100">LIQUIDEZ</p>
+                              <p className="text-xs text-slate-500">{acct}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-slate-400 bg-slate-500/10 border-slate-500/20">
+                            Efectivo
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">
+                          {editingCash === acct ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400 text-sm">$</span>
+                              <input
+                                autoFocus
+                                type="number"
+                                min="0"
+                                step="100"
+                                className="w-24 bg-slate-700 border border-indigo-500 rounded px-2 py-0.5 text-sm text-slate-100 focus:outline-none"
+                                value={cashInput}
+                                onChange={e => setCashInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') commitCash(); if (e.key === 'Escape') setEditingCash(null) }}
+                                onBlur={commitCash}
+                              />
+                              <button onClick={commitCash} className="p-1 rounded hover:bg-slate-600 text-emerald-400">
+                                <Check size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            formatCurrency(cash[acct])
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2 w-24">
+                            <div className="flex-1 h-1.5 bg-slate-700 rounded-full">
+                              <div className="h-full bg-slate-500 rounded-full"
+                                style={{ width: `${totalValue > 0 ? Math.min((cash[acct] / (totalValue + cashForFilter)) * 100, 100) : 0}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono w-9 text-right">
+                              {totalValue > 0 ? ((cash[acct] / (totalValue + cashForFilter)) * 100).toFixed(1) : '0.0'}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => startEditCash(acct)}
+                              className="p-1.5 rounded hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  })()}
                 </tbody>
               </table>
             </div>

@@ -121,6 +121,29 @@ export function mergeAccounts(positions: EditablePosition[]): EditablePosition[]
   return Array.from(map.values())
 }
 
+// ─── Cash / Liquidez per account ────────────────────────────────────────────
+const CASH_KEY = 'portfolio_cash_v1'
+
+export interface AccountCash {
+  Lucio: number
+  Agro: number
+}
+
+export function loadCash(): AccountCash {
+  if (typeof window === 'undefined') return { Lucio: 0, Agro: 0 }
+  try {
+    const raw = localStorage.getItem(CASH_KEY)
+    return raw ? JSON.parse(raw) : { Lucio: 0, Agro: 0 }
+  } catch {
+    return { Lucio: 0, Agro: 0 }
+  }
+}
+
+export function saveCash(cash: AccountCash): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(CASH_KEY, JSON.stringify(cash))
+}
+
 // Known tickers for the "Add position" autocomplete — BYMA USD D-class tickers
 export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name' | 'sector' | 'ratio'>[] = [
   // Energía Argentina
