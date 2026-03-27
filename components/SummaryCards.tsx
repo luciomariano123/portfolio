@@ -16,20 +16,15 @@ interface SummaryCardsProps {
   loading: boolean
 }
 
-// Calculate year P&L from historical data
-function yearPnl(year: number, currentValue: number): { abs: number; pct: number } {
-  const startEntry = year === 2024
-    ? null  // use INITIAL_CAPITAL
-    : HISTORICAL_DATA.filter(d => d.date <= `${year - 1}-12-31`).at(-1)
-  const endEntry = HISTORICAL_DATA.filter(d => d.date <= `${year}-12-31`).at(-1)
-  const startVal = year === 2024 ? INITIAL_CAPITAL : (startEntry?.quotaPart ?? INITIAL_CAPITAL)
-  const endVal = endEntry && endEntry.date.startsWith(String(year))
-    ? endEntry.quotaPart
-    : (endEntry?.quotaPart ?? currentValue)
-  // For current year use live value
-  const now = new Date()
-  const finalVal = year === now.getFullYear() ? currentValue : endVal
-  const abs = finalVal - startVal
+// Calculate year P&L from historical data only (no live prices — avoids stale after-hours distortion)
+function yearPnl(year: number): { abs: number; pct: number } {
+  const startVal = year === 2024
+    ? INITIAL_CAPITAL
+    : (HISTORICAL_DATA.filter(d => d.date <= `${year - 1}-12-31`).at(-1)?.quotaPart ?? INITIAL_CAPITAL)
+  // For current year: last snapshot this year; for past years: last snapshot of that year
+  const endEntry = HISTORICAL_DATA.filter(d => d.date.startsWith(String(year))).at(-1)
+  if (!endEntry) return { abs: 0, pct: 0 }
+  const abs = endEntry.quotaPart - startVal
   const pct = startVal > 0 ? (abs / startVal) * 100 : 0
   return { abs, pct }
 }
@@ -54,7 +49,7 @@ export function SummaryCards({
   // Year breakdowns
   const years = [2024, 2025, currentYear].filter((y, i, arr) => arr.indexOf(y) === i)
   const yearBreakdown = years.map(y => {
-    const { pct } = yearPnl(y, totalValueUSD)
+    const { pct } = yearPnl(y)
     return `${y}: ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
   }).join(' · ')
 
@@ -78,7 +73,7 @@ export function SummaryCards({
       valueColor: getPnlColor(inceptionPnl),
       highlight: false,
       yearChips: loading ? null : years.map(y => {
-        const { pct } = yearPnl(y, totalValueUSD)
+        const { pct } = yearPnl(y)
         return { year: y, pct }
       }),
     },
