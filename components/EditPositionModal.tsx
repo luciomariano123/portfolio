@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { EditablePosition, KNOWN_TICKERS } from '@/lib/positions-store'
 import { X, Search } from 'lucide-react'
 
@@ -19,6 +19,8 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
   const [ppc, setPpc] = useState(initial?.ppc?.toString() ?? '')
   const [account, setAccount] = useState<EditablePosition['account']>(initial?.account ?? 'Lucio')
   const [targetPct, setTargetPct] = useState(initial?.targetPct?.toString() ?? '')
+  const [salePrice, setSalePrice] = useState('')
+  const [costOverride, setCostOverride] = useState('')  // editable total cost
   const [error, setError] = useState('')
 
   const filtered = KNOWN_TICKERS.filter(t =>
@@ -36,8 +38,34 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
     } catch { return NaN }
   }
 
-  const resolvedQty = evalExpr(quantity)
-  const qtyDisplay  = !isNaN(resolvedQty) && quantity.match(/[+\-*/]/) ? resolvedQty : null
+  const resolvedQty  = evalExpr(quantity)
+  const qtyDisplay   = !isNaN(resolvedQty) && quantity.match(/[+\-*/]/) ? resolvedQty : null
+
+  // Detect sale: expression contains subtraction and result < original quantity
+  const isSale       = !!quantity.match(/-/) && !isNaN(resolvedQty) && !!initial && resolvedQty < initial.quantity
+  const soldQty      = isSale ? (initial!.quantity - resolvedQty) : 0
+  const salePriceNum = parseFloat(salePrice)
+  const ppcNum       = parseFloat(ppc)
+  const realizedPnl  = isSale && !isNaN(salePriceNum) && !isNaN(ppcNum)
+    ? (salePriceNum - ppcNum) * soldQty
+    : null
+
+  // Computed cost total (qty × ppc), overridable
+  const computedCost = !isNaN(resolvedQty) && !isNaN(ppcNum) ? resolvedQty * ppcNum : null
+
+  // When user edits cost manually → back-calculate PPC
+  function handleCostChange(val: string) {
+    setCostOverride(val)
+    const costNum = parseFloat(val)
+    if (!isNaN(costNum) && !isNaN(resolvedQty) && resolvedQty > 0) {
+      setPpc((costNum / resolvedQty).toFixed(4))
+    }
+  }
+
+  // Sync cost override display when qty/ppc change (only if not manually overriding)
+  useEffect(() => { setCostOverride('') }, [quantity, ppc])
+
+  const displayCost = costOverride !== '' ? costOverride : (computedCost !== null ? computedCost.toFixed(2) : '')
 
   function handleSubmit() {
     if (!selected) { setError('Seleccioná un ticker'); return }
@@ -115,11 +143,9 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
         </div>
 
         {/* Quantity + PPC */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">
-              Cantidad (láminas)
-            </label>
+            <label className="block text-xs text-slate-400 mb-1.5">Cantidad (láminas)</label>
             <input
               type="text"
               inputMode="decimal"
@@ -131,16 +157,15 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
             {qtyDisplay !== null && (
               <p className="text-xs text-indigo-400 mt-1 font-medium">= {Math.round(qtyDisplay).toLocaleString()} láminas</p>
             )}
+            {isSale && (
+              <p className="text-xs text-orange-400 mt-0.5">Vendés {Math.round(soldQty).toLocaleString()} láminas</p>
+            )}
             {selected && quantity && !isNaN(resolvedQty) && (
-              <p className="text-xs text-slate-500 mt-0.5">
-                = {(resolvedQty / selected.ratio).toFixed(2)} ADRs
-              </p>
+              <p className="text-xs text-slate-500 mt-0.5">= {(resolvedQty / selected.ratio).toFixed(2)} ADRs</p>
             )}
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">
-              PPC (USD por ADR)
-            </label>
+            <label className="block text-xs text-slate-400 mb-1.5">PPC (USD por lámina)</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
               <input
@@ -150,14 +175,41 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
                 className="w-full rounded-lg pl-6 pr-3 py-2.5 text-sm bg-slate-700 border border-slate-600 text-slate-100 focus:outline-none focus:border-indigo-500"
                 placeholder="0.00"
                 value={ppc}
-                onChange={e => setPpc(e.target.value)}
+                onChange={e => { setPpc(e.target.value); setCostOverride('') }}
               />
             </div>
           </div>
         </div>
 
+        {/* Sale price row (only when selling) */}
+        {isSale && (
+          <div className="mb-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/5">
+            <label className="block text-xs text-orange-400 mb-1.5">Precio de venta (USD por lámina)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-lg pl-6 pr-3 py-2.5 text-sm bg-slate-700 border border-orange-500/40 text-slate-100 focus:outline-none focus:border-orange-400"
+                placeholder="Precio al que vendiste"
+                value={salePrice}
+                onChange={e => setSalePrice(e.target.value)}
+              />
+            </div>
+            {realizedPnl !== null && (
+              <p className={`text-sm font-bold mt-2 ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                P&L realizado: {realizedPnl >= 0 ? '+' : ''}${realizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                <span className="text-xs font-normal text-slate-400 ml-1">
+                  ({((salePriceNum - ppcNum) / ppcNum * 100).toFixed(1)}% por lámina)
+                </span>
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Account + Target */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
             <label className="block text-xs text-slate-400 mb-1.5">Cuenta</label>
             <div className="flex gap-1">
@@ -190,15 +242,22 @@ export function EditPositionModal({ onSave, onClose, initial }: Props) {
           </div>
         </div>
 
-        {/* Cost preview */}
+        {/* Editable cost total */}
         {selected && quantity && ppc && (
-          <div className="mb-4 px-3 py-2.5 rounded-lg bg-slate-700/40 border border-slate-700">
-            <p className="text-xs text-slate-400">
-              Costo total:{' '}
-              <span className="text-slate-100 font-mono font-medium">
-                ${((resolvedQty / selected.ratio) * parseFloat(ppc)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-              </span>
-            </p>
+          <div className="mb-4">
+            <label className="block text-xs text-slate-400 mb-1.5">Costo total invertido (USD)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-lg pl-6 pr-3 py-2.5 text-sm bg-slate-700/60 border border-slate-600 text-slate-100 focus:outline-none focus:border-indigo-500"
+                value={displayCost}
+                onChange={e => handleCostChange(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Editalo para recalcular el PPC automáticamente</p>
           </div>
         )}
 
