@@ -137,7 +137,7 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-3 text-center">
-                Gemini AI va a leer los boletos y extraer Tipo / Ticker / Cantidad / Precio
+                OCR gratuito — lee el texto del boleto y extrae Tipo / Ticker / Cantidad / Precio
               </p>
             </div>
           )}
@@ -146,7 +146,7 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
             <div className="flex flex-col items-center gap-4 py-10">
               {preview && <img src={preview} className="w-32 h-32 object-cover rounded-lg opacity-50" alt="preview" />}
               <Loader2 size={28} className="animate-spin text-indigo-400" />
-              <p className="text-sm text-slate-300">Analizando imagen con Gemini AI...</p>
+              <p className="text-sm text-slate-300">Leyendo texto con OCR... (puede tardar ~30s la primera vez)</p>
             </div>
           )}
 
