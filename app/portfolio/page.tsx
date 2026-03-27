@@ -182,20 +182,19 @@ export default function PortfolioPage() {
 
   const totalValue = rows.reduce((s, r) => s + r.currentValueUSD, 0)
 
-  // Feature 4: Total real portfolio value (CEDEARs + cash + ONs)
-  const totalPortfolio = useMemo(() => {
-    if (typeof window === 'undefined') return summary.totalValue
-    return computeTotalPortfolioValue(summary.totalValue)
-  }, [summary.totalValue])
-
-  // Auto-save daily snapshot once prices are loaded
+  // Auto-save daily snapshot — always uses CONSOLIDATED positions (not filtered view)
   const snapshotSavedRef = useRef(false)
   useEffect(() => {
-    if (loading || summary.totalValue <= 0 || snapshotSavedRef.current) return
+    if (loading || snapshotSavedRef.current) return
+    // Compute consolidated CEDEAR value regardless of current filter
+    const consolidatedCEDEARValue = consolidated.reduce((sum, pos) => {
+      return sum + pos.quantity * (prices[pos.tickerYF]?.price ?? 0)
+    }, 0)
+    if (consolidatedCEDEARValue <= 0) return
     snapshotSavedRef.current = true
-    const total = computeTotalPortfolioValue(summary.totalValue)
+    const total = computeTotalPortfolioValue(consolidatedCEDEARValue)
     saveTodaySnapshot(total)
-  }, [loading, summary.totalValue])
+  }, [loading, consolidated, prices])
 
   // Feature 5: Treemap data
   const treemapData = useMemo(() => {

@@ -27,7 +27,7 @@ function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
     case '1M': cutoff.setMonth(cutoff.getMonth() - 1); break
     case '3M': cutoff.setMonth(cutoff.getMonth() - 3); break
     case '6M': cutoff.setMonth(cutoff.getMonth() - 6); break
-    case 'YTD': cutoff.setMonth(0); cutoff.setDate(1); break
+    case 'YTD': cutoff.setFullYear(cutoff.getFullYear() - 1); cutoff.setMonth(11); cutoff.setDate(31); break
     case '1A': cutoff.setFullYear(cutoff.getFullYear() - 1); break
     case 'TODO': return data
   }
