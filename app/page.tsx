@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA } from '@/lib/portfolio-data'
+import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA, INITIAL_CAPITAL } from '@/lib/portfolio-data'
 import { SummaryCards } from '@/components/SummaryCards'
 import { EvolutionChart } from '@/components/EvolutionChart'
 import { SectorChart } from '@/components/SectorChart'
@@ -97,17 +97,18 @@ export default function DashboardPage() {
   }, [positions, prices])
 
   const ytdReturn = useMemo(() => {
-    const ytdStart = HISTORICAL_DATA.find(d => d.date >= '2026-01-01')
+    const currentYear = new Date().getFullYear()
+    const ytdBase = HISTORICAL_DATA.filter(d => d.date <= `${currentYear - 1}-12-31`).at(-1)
+    const base = ytdBase?.quotaPart ?? INITIAL_CAPITAL
     const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!ytdStart || !last) return 0
-    return ((last.quotaPart - ytdStart.quotaPart) / ytdStart.quotaPart) * 100
+    if (!last) return 0
+    return ((last.quotaPart - base) / base) * 100
   }, [])
 
   const totalReturn = useMemo(() => {
-    const first = HISTORICAL_DATA[0]
     const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!first || !last) return 0
-    return ((last.quotaPart - first.quotaPart) / first.quotaPart) * 100
+    if (!last) return 0
+    return ((last.quotaPart - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100
   }, [])
 
   if (!mounted) return null

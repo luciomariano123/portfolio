@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, DollarSign, Activity, Wallet } from 'lucide-react'
+import { HISTORICAL_DATA, INITIAL_CAPITAL } from '@/lib/portfolio-data'
 
 interface SummaryCardsProps {
   totalValueUSD: number
@@ -15,6 +16,24 @@ interface SummaryCardsProps {
   loading: boolean
 }
 
+// Calculate year P&L from historical data
+function yearPnl(year: number, currentValue: number): { abs: number; pct: number } {
+  const startEntry = year === 2024
+    ? null  // use INITIAL_CAPITAL
+    : HISTORICAL_DATA.filter(d => d.date <= `${year - 1}-12-31`).at(-1)
+  const endEntry = HISTORICAL_DATA.filter(d => d.date <= `${year}-12-31`).at(-1)
+  const startVal = year === 2024 ? INITIAL_CAPITAL : (startEntry?.quotaPart ?? INITIAL_CAPITAL)
+  const endVal = endEntry && endEntry.date.startsWith(String(year))
+    ? endEntry.quotaPart
+    : (endEntry?.quotaPart ?? currentValue)
+  // For current year use live value
+  const now = new Date()
+  const finalVal = year === now.getFullYear() ? currentValue : endVal
+  const abs = finalVal - startVal
+  const pct = startVal > 0 ? (abs / startVal) * 100 : 0
+  return { abs, pct }
+}
+
 export function SummaryCards({
   totalValueUSD,
   totalPnlUSD,
@@ -25,6 +44,20 @@ export function SummaryCards({
   dolarBlue,
   loading,
 }: SummaryCardsProps) {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+
+  // P&L desde inicio (vs INITIAL_CAPITAL)
+  const inceptionPnl = totalValueUSD - INITIAL_CAPITAL
+  const inceptionPct = (inceptionPnl / INITIAL_CAPITAL) * 100
+
+  // Year breakdowns
+  const years = [2024, 2025, currentYear].filter((y, i, arr) => arr.indexOf(y) === i)
+  const yearBreakdown = years.map(y => {
+    const { pct } = yearPnl(y, totalValueUSD)
+    return `${y}: ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+  }).join(' · ')
+
   const cards = [
     {
       title: 'Valor Total Cartera',
@@ -36,13 +69,13 @@ export function SummaryCards({
       highlight: false,
     },
     {
-      title: 'P&L Total',
-      icon: totalPnlPct >= 0 ? TrendingUp : TrendingDown,
-      iconColor: totalPnlPct >= 0 ? 'text-emerald-400' : 'text-red-400',
-      iconBg: totalPnlPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
-      value: loading ? null : (totalPnlUSD >= 0 ? '+' : '') + formatCurrency(totalPnlUSD),
-      sub: loading ? null : formatPercent(totalPnlPct) + ' desde compra',
-      valueColor: getPnlColor(totalPnlUSD),
+      title: 'P&L Desde Inicio',
+      icon: inceptionPct >= 0 ? TrendingUp : TrendingDown,
+      iconColor: inceptionPct >= 0 ? 'text-emerald-400' : 'text-red-400',
+      iconBg: inceptionPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
+      value: loading ? null : (inceptionPnl >= 0 ? '+' : '') + formatCurrency(inceptionPnl),
+      sub: loading ? null : `${formatPercent(inceptionPct)} vs $200k inicial · ${yearBreakdown}`,
+      valueColor: getPnlColor(inceptionPnl),
       highlight: false,
     },
     {

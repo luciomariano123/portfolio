@@ -132,10 +132,18 @@ export const COUPON_SCHEDULE: CouponPayment[] = [
   { date: '2027-11-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
 ]
 
+// Capital inicial de la cartera (Oct 2024)
+export const INITIAL_CAPITAL = 200000
+
 // Historical evolution data from "Evolucion TOTAL" sheet (real weekly snapshots)
 // Values = total portfolio in USD (CEDEARs + cash + ONs at market)
-// Start: Nov 9, 2024 (first consolidated snapshot) — End: Mar 21, 2026
+// Start: Oct 1, 2024 — End: Mar 21, 2026
 export const HISTORICAL_DATA: HistoricalPoint[] = [
+  { date: '2024-10-01', quotaPart: 200500.00 },
+  { date: '2024-10-16', quotaPart: 202958.10 },
+  { date: '2024-10-21', quotaPart: 202148.10 },
+  { date: '2024-10-27', quotaPart: 203267.10 },
+  { date: '2024-11-01', quotaPart: 202454.20 },
   { date: '2024-11-09', quotaPart: 204161.13 },
   { date: '2024-11-30', quotaPart: 212499.37 },
   { date: '2024-12-07', quotaPart: 212358.84 },
@@ -146,6 +154,7 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2025-01-31', quotaPart: 218866.27 },
   { date: '2025-02-08', quotaPart: 214621.68 },
   { date: '2025-02-22', quotaPart: 214853.16 },
+  { date: '2025-03-12', quotaPart: 201370.70 },
   { date: '2025-03-14', quotaPart: 208654.12 },
   { date: '2025-03-22', quotaPart: 209189.85 },
   { date: '2025-04-01', quotaPart: 202985.71 },
