@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
-import { SECTOR_COLORS } from '@/lib/portfolio-data'
+import { SECTOR_COLORS, FIXED_INCOME } from '@/lib/portfolio-data'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
   TrendingUp, TrendingDown, Minus, AlertCircle, Check, FileImage,
@@ -255,11 +255,20 @@ export default function PortfolioPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 mb-1">Valor total (USD)</p>
-            <p className="text-base font-bold font-mono truncate text-slate-100">{formatCurrency(totalPortfolio)}</p>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">
-              CEDEARs: {formatCurrency(summary.totalValue)}
-              {cashForFilter > 0 && ` + ${formatCurrency(cashForFilter)} cash`}
-            </p>
+            {(() => {
+              const onValue = FIXED_INCOME.reduce((s, f) => s + f.nominal, 0)
+              const displayTotal = summary.totalValue + cashForFilter + onValue
+              return (
+                <>
+                  <p className="text-base font-bold font-mono truncate text-slate-100">{formatCurrency(displayTotal)}</p>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    CEDEARs {formatCurrency(summary.totalValue)}
+                    {cashForFilter > 0 && ` · Cash ${formatCurrency(cashForFilter)}`}
+                    {` · ONs ${formatCurrency(onValue)}`}
+                  </p>
+                </>
+              )
+            })()}
           </CardContent>
         </Card>
         {[
