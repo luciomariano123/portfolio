@@ -41,7 +41,7 @@ Reglas de mapeo importantes:
 Respondé SOLO con el JSON array, sin texto adicional ni markdown.`
 
   const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,7 +59,7 @@ Respondé SOLO con el JSON array, sin texto adicional ni markdown.`
 
   if (!geminiRes.ok) {
     const err = await geminiRes.text()
-    return NextResponse.json({ error: 'Gemini error', detail: err }, { status: 500 })
+    return NextResponse.json({ error: 'Gemini error', detail: `HTTP ${geminiRes.status}: ${err}` }, { status: 500 })
   }
 
   const geminiData = await geminiRes.json() as {
