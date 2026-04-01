@@ -13,7 +13,7 @@ export const DEFAULT_POSITIONS = [
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',    quantity: 96,   ppc: 33.72, account: 'Lucio' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',  quantity: 4502, ppc: 3.27,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',         quantity: 1386, ppc: 4.99,  account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',         quantity: 1386, ppc: 4.99,  account: 'Agro' },
   { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',         quantity: 644,  ppc: 7.31,  account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',      quantity: 316,  ppc: 15.13, account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",     quantity: 235,  ppc: 13.50, account: 'Agro' },

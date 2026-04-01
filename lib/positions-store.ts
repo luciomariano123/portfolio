@@ -43,7 +43,7 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 96,   ppc: 33.72, account: 'Lucio' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 4502, ppc: 3.27,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.99,  account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.99,  account: 'Agro' },
   { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.31,  account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.13, account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.50, account: 'Agro' },
@@ -159,7 +159,7 @@ export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1 },
   { ticker: 'AAPL',  tickerYF: 'AAPLD.BA',  name: 'Apple',           sector: 'Tecnología', ratio: 1 },
   { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1 },
-  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',          sector: 'Tecnología', ratio: 1 },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1 },
   { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1 },
   { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1 },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1 },

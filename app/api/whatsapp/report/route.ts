@@ -126,7 +126,7 @@ async function fetchNews(tickers: string[]): Promise<string[]> {
 
 const SECTOR_MAP: Record<string, string> = {
   'AMZN': 'Tecnología', 'MELI': 'Tecnología', 'META': 'Tecnología', 'MSFT': 'Tecnología',
-  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'GOOGL': 'Tecnología', 'NVDA': 'Tecnología',
+  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'GOGL': 'Tecnología', 'NVDA': 'Tecnología',
   'SPY': 'ETF',
   'PAMP': 'Energía',
   'KO': 'Consumo', 'MCD': 'Consumo', 'PEP': 'Consumo',
