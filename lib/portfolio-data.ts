@@ -97,11 +97,10 @@ export function getConsolidatedPositions(): Position[] {
   return result
 }
 
-// Cash positions
+// Cash positions (actualizado 31-mar-2026)
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 3978, account: 'Lucio' },
-  { currency: 'ARS', amount: 200000, account: 'Agro' },
-  { currency: 'USD', amount: 6638, account: 'Agro' },
+  { currency: 'USD', amount: 71414, account: 'Lucio' },
+  { currency: 'USD', amount: 6638,  account: 'Agro'  },
 ]
 
 // Fixed Income — Obligaciones Negociables
@@ -198,6 +197,7 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-02-22', quotaPart: 241184.90 },
   { date: '2026-03-08', quotaPart: 237894.85 },
   { date: '2026-03-21', quotaPart: 242531.17 },
+  { date: '2026-03-31', quotaPart: 250321.00 },
 ]
 
 // CEDEAR ratios — láminas per 1 ADR

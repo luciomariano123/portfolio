@@ -22,6 +22,9 @@ interface PriceInfo {
   change: number
   changePct: number
   value: number
+  cost: number     // total cost basis (qty × avg ppc)
+  pnl: number      // unrealized P&L
+  pnlPct: number   // pnl / cost × 100
 }
 
 interface FetchPricesResult {
@@ -47,9 +50,12 @@ async function fetchPrices(): Promise<FetchPricesResult> {
         const changePct = q.regularMarketChangePercent ?? 0
 
         // Sum quantity across all accounts for this ticker
-        const totalQty = DEFAULT_POSITIONS
-          .filter(p => p.tickerYF === pos.tickerYF)
-          .reduce((s, p) => s + p.quantity, 0)
+        const same     = DEFAULT_POSITIONS.filter(p => p.tickerYF === pos.tickerYF)
+        const totalQty = same.reduce((s, p) => s + p.quantity, 0)
+        const totalCost = same.reduce((s, p) => s + p.quantity * p.ppc, 0)
+        const value    = totalQty * price
+        const pnl      = value - totalCost
+        const pnlPct   = totalCost > 0 ? (pnl / totalCost) * 100 : 0
 
         results.push({
           ticker: pos.ticker,
@@ -57,7 +63,10 @@ async function fetchPrices(): Promise<FetchPricesResult> {
           price,
           change,
           changePct,
-          value: totalQty * price,
+          value,
+          cost: totalCost,
+          pnl,
+          pnlPct,
         })
       } catch {
         // skip failed
@@ -117,8 +126,9 @@ async function fetchNews(tickers: string[]): Promise<string[]> {
 
 const SECTOR_MAP: Record<string, string> = {
   'AMZN': 'Tecnología', 'MELI': 'Tecnología', 'META': 'Tecnología', 'MSFT': 'Tecnología',
-  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'SPY': 'ETF',
-  'PAMP': 'Energía', 'TGSU2': 'Energía', 'YPF': 'Energía',
+  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'GOOGL': 'Tecnología', 'NVDA': 'Tecnología',
+  'SPY': 'ETF',
+  'PAMP': 'Energía',
   'KO': 'Consumo', 'MCD': 'Consumo', 'PEP': 'Consumo',
 }
 
@@ -215,13 +225,23 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
 
   if (top3up.length) {
     msg += `🚀 *Mejores hoy*\n`
-    for (const p of top3up) msg += `  🟢 ${p.ticker} ${fmtPct(p.changePct)}\n`
+    for (const p of top3up) {
+      const dailyUSD = p.change * (p.price > 0 ? p.value / p.price : 0)
+      const impactPct = totalComplete > 0 ? (dailyUSD / totalComplete) * 100 : 0
+      const pnlStr = p.pnl >= 0 ? `+${fmtSign(p.pnl)}` : fmtSign(p.pnl)
+      msg += `  🟢 ${p.ticker} ${fmtPct(p.changePct)} | hoy: +${fmt(dailyUSD)} (+${impactPct.toFixed(2)}% cartera) | P&L total: ${pnlStr} (${fmtPct(p.pnlPct)})\n`
+    }
     msg += '\n'
   }
 
   if (top3down.length) {
     msg += `📉 *Peores hoy*\n`
-    for (const p of top3down) msg += `  🔴 ${p.ticker} ${fmtPct(p.changePct)}\n`
+    for (const p of top3down) {
+      const dailyUSD = p.change * (p.price > 0 ? p.value / p.price : 0)
+      const impactPct = totalComplete > 0 ? (dailyUSD / totalComplete) * 100 : 0
+      const pnlStr = p.pnl >= 0 ? `+${fmtSign(p.pnl)}` : fmtSign(p.pnl)
+      msg += `  🔴 ${p.ticker} ${fmtPct(p.changePct)} | hoy: ${fmtSign(dailyUSD)} (${impactPct.toFixed(2)}% cartera) | P&L total: ${pnlStr} (${fmtPct(p.pnlPct)})\n`
+    }
     msg += '\n'
   }
 

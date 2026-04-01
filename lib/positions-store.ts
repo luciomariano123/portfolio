@@ -24,10 +24,12 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-const POSITIONS_KEY = 'cedear_positions_v3'   // bumped to v3: BYMA tickers + ratio=1
+const POSITIONS_KEY = 'cedear_positions_v4'   // bumped to v4: GOOGL+NVDA Agro, YPF vendido, PAMP Lucio corregido, TGSU2 eliminado
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
-// Real positions — Balanz Lucio + Balanz Agropecuaria
+// Real positions — Balanz Lucio + Balanz Agropecuaria (actualizado 31-mar-2026)
+// Cambios vs v3: PAMP Lucio 5888→4502 (ppc $3.27), eliminado TGSU2 Lucio, vendido YPF (ambas cuentas),
+//                agregado GOOGL Agro (1386 @ $4.99), NVDA Agro (644 @ $7.31)
 // tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
 const DEFAULT_POSITIONS: EditablePosition[] = [
@@ -39,17 +41,16 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 78,   ppc: 50.93, account: 'Lucio' },
   { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 26.77, account: 'Lucio' },
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 96,   ppc: 33.72, account: 'Lucio' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 5888, ppc: 3.34,  account: 'Lucio' },
-  { ticker: 'TGSU2', tickerYF: 'TGSUD.BA',  name: 'TGS',             sector: 'Energía',    ratio: 1, quantity: 468,  ppc: 6.32,  account: 'Lucio' },
-  { ticker: 'YPF',   tickerYF: 'YPFDD.BA',  name: 'YPF S.A.',        sector: 'Energía',    ratio: 1, quantity: 1264, ppc: 37.76, account: 'Lucio' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 4502, ppc: 3.27,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
+  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.99,  account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.31,  account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.13, account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.50, account: 'Agro' },
   { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 641,  ppc: 8.53,  account: 'Agro' },
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 633,  ppc: 14.74, account: 'Agro' },
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 65,   ppc: 51.29, account: 'Agro' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 2719, ppc: 3.53,  account: 'Agro' },
-  { ticker: 'YPF',   tickerYF: 'YPFDD.BA',  name: 'YPF S.A.',        sector: 'Energía',    ratio: 1, quantity: 236,  ppc: 35.77, account: 'Agro' },
 ]
 
 export function loadPositions(): EditablePosition[] {
@@ -122,20 +123,22 @@ export function mergeAccounts(positions: EditablePosition[]): EditablePosition[]
 }
 
 // ─── Cash / Liquidez per account ────────────────────────────────────────────
-const CASH_KEY = 'portfolio_cash_v1'
+const CASH_KEY = 'portfolio_cash_v2'  // bumped to v2: Lucio $71,414 default (31-mar-2026)
 
 export interface AccountCash {
   Lucio: number
   Agro: number
 }
 
+const DEFAULT_CASH: AccountCash = { Lucio: 71414, Agro: 6638 }
+
 export function loadCash(): AccountCash {
-  if (typeof window === 'undefined') return { Lucio: 0, Agro: 0 }
+  if (typeof window === 'undefined') return DEFAULT_CASH
   try {
     const raw = localStorage.getItem(CASH_KEY)
-    return raw ? JSON.parse(raw) : { Lucio: 0, Agro: 0 }
+    return raw ? JSON.parse(raw) : DEFAULT_CASH
   } catch {
-    return { Lucio: 0, Agro: 0 }
+    return DEFAULT_CASH
   }
 }
 
