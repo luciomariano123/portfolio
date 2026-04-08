@@ -14,7 +14,7 @@ export const DEFAULT_POSITIONS = [
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',       quantity: 78,   ppc: 50.9270513, account: 'Lucio' },
   { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',          quantity: 760,  ppc: 19.3875526, account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',         quantity: 1386, ppc: 4.98556999, account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',         quantity: 1386, ppc: 4.98556999, account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',      quantity: 316,  ppc: 15.1329114, account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",     quantity: 235,  ppc: 13.4978723, account: 'Agro' },
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',      quantity: 633,  ppc: 14.7424961, account: 'Agro' },
