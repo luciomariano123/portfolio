@@ -17,18 +17,16 @@ export function usePositions() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Migration v3 → v4: seed changes store with boleto purchases (08/04/2026)
-    if (typeof window !== 'undefined') {
-      const hadV3 = !!localStorage.getItem('cedear_positions_v3')
-      const hasV4 = !!localStorage.getItem('cedear_positions_v4')
-      if (hadV3 && !hasV4) {
-        recordChange({ type: 'add',    ticker: 'AAPL', name: 'Apple',        account: 'Lucio', quantityAfter: 766,  ppcAfter: 12.82 })
-        recordChange({ type: 'update', ticker: 'SPY',  name: 'S&P 500 ETF',  account: 'Lucio', quantityBefore: 96,  quantityAfter: 673,  ppcBefore: 33.72, ppcAfter: 34.02 })
-        recordChange({ type: 'add',    ticker: 'NU',   name: 'Nu Holdings',  account: 'Lucio', quantityAfter: 675,  ppcAfter: 7.28 })
-        recordChange({ type: 'update', ticker: 'MSFT', name: 'Microsoft',    account: 'Lucio', quantityBefore: 760, quantityAfter: 1144, ppcBefore: 15.24, ppcAfter: 12.77 })
-        recordChange({ type: 'update', ticker: 'META', name: 'Meta Platforms',account: 'Lucio', quantityBefore: 311, quantityAfter: 510,  ppcBefore: 29.01, ppcAfter: 24.60 })
-        recordChange({ type: 'update', ticker: 'TSLA', name: 'Tesla',        account: 'Lucio', quantityBefore: 183, quantityAfter: 760,  ppcBefore: 26.77, ppcAfter: 23.53 })
-      }
+    // One-time migration: seed changes store with boleto purchases (08/04/2026)
+    const MIGRATION_FLAG = 'portfolio_migration_v3v4_done'
+    if (typeof window !== 'undefined' && !localStorage.getItem(MIGRATION_FLAG)) {
+      localStorage.setItem(MIGRATION_FLAG, '1')  // set flag first to prevent double-run
+      recordChange({ type: 'add',    ticker: 'AAPL', name: 'Apple',         account: 'Lucio', quantityAfter: 766,  ppcAfter: 12.82 })
+      recordChange({ type: 'update', ticker: 'SPY',  name: 'S&P 500 ETF',   account: 'Lucio', quantityBefore: 96,  quantityAfter: 673,  ppcBefore: 33.72, ppcAfter: 34.02 })
+      recordChange({ type: 'add',    ticker: 'NU',   name: 'Nu Holdings',   account: 'Lucio', quantityAfter: 675,  ppcAfter: 7.28 })
+      recordChange({ type: 'update', ticker: 'MSFT', name: 'Microsoft',     account: 'Lucio', quantityBefore: 760, quantityAfter: 1144, ppcBefore: 15.24, ppcAfter: 12.77 })
+      recordChange({ type: 'update', ticker: 'META', name: 'Meta Platforms', account: 'Lucio', quantityBefore: 311, quantityAfter: 510,  ppcBefore: 29.01, ppcAfter: 24.60 })
+      recordChange({ type: 'update', ticker: 'TSLA', name: 'Tesla',         account: 'Lucio', quantityBefore: 183, quantityAfter: 760,  ppcBefore: 26.77, ppcAfter: 23.53 })
     }
     setPositions(loadPositions())
     setArsPrices(loadArsPrices())

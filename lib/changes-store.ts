@@ -15,7 +15,7 @@ export interface PortfolioChange {
   ppcAfter?: number
 }
 
-const CHANGES_KEY = 'portfolio_changes_v1'
+const CHANGES_KEY = 'portfolio_changes_v2'   // bumped to v2: clears duplicates
 const MAX_STORED = 50
 const RETENTION_DAYS = 7
 
@@ -52,7 +52,11 @@ export function clearChanges(): void {
 }
 
 function fmtQty(n: number) { return n.toLocaleString('es-AR') }
-function fmtUSD(n: number) { return `$${n.toFixed(2)}` }
+function fmtUSD(n: number) { return `u$d ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+function fmtTotal(qty: number, ppc: number) {
+  const total = qty * ppc
+  return `≈ u$d ${total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
 
 function describeChange(c: PortfolioChange): string {
   const acct = c.account === 'Lucio' ? 'Lucio' : 'Agro'
@@ -64,21 +68,33 @@ function describeChange(c: PortfolioChange): string {
   })
 
   if (c.type === 'add') {
-    return `• [${date} ${time}] ➕ Agregué ${c.name} (${c.ticker}) en ${acct}: ${fmtQty(c.quantityAfter ?? 0)} láminas a ${fmtUSD(c.ppcAfter ?? 0)}`
+    const qty = c.quantityAfter ?? 0
+    const ppc = c.ppcAfter ?? 0
+    return `• [${date} ${time}] ➕ Compré ${c.name} (${c.ticker}) en ${acct}: ${fmtQty(qty)} láminas a ${fmtUSD(ppc)} — ${fmtTotal(qty, ppc)}`
   }
+
   if (c.type === 'remove') {
     return `• [${date} ${time}] ❌ Eliminé ${c.name} (${c.ticker}) de ${acct} (tenía ${fmtQty(c.quantityBefore ?? 0)} láminas)`
   }
+
   // update
   const parts: string[] = []
-  if (c.quantityBefore !== c.quantityAfter && c.quantityBefore !== undefined && c.quantityAfter !== undefined) {
-    const diff = c.quantityAfter - c.quantityBefore
-    parts.push(`cantidad: ${fmtQty(c.quantityBefore)} → ${fmtQty(c.quantityAfter)} (${diff > 0 ? '+' : ''}${fmtQty(diff)})`)
+  const qtyBefore = c.quantityBefore ?? 0
+  const qtyAfter  = c.quantityAfter  ?? 0
+  const ppcAfter  = c.ppcAfter       ?? 0
+
+  if (qtyBefore !== qtyAfter) {
+    const diff = qtyAfter - qtyBefore
+    const verb = diff > 0 ? 'Compré más' : 'Vendí'
+    const invested = Math.abs(diff) * ppcAfter
+    parts.push(`${verb} ${fmtQty(Math.abs(diff))} láminas a ${fmtUSD(ppcAfter)} — ≈ u$d ${invested.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`)
+    parts.push(`Total: ${fmtQty(qtyAfter)} lám. · PPC prom ${fmtUSD(ppcAfter)}`)
+  } else if (c.ppcBefore !== undefined && Math.abs(c.ppcBefore - ppcAfter) > 0.001) {
+    parts.push(`PPC: ${fmtUSD(c.ppcBefore)} → ${fmtUSD(ppcAfter)}`)
   }
-  if (c.ppcBefore !== undefined && c.ppcAfter !== undefined && Math.abs(c.ppcBefore - c.ppcAfter) > 0.001) {
-    parts.push(`PPC: ${fmtUSD(c.ppcBefore)} → ${fmtUSD(c.ppcAfter)}`)
-  }
-  return `• [${date} ${time}] ✏️ Modifiqué ${c.name} (${c.ticker}) en ${acct}${parts.length ? ': ' + parts.join(', ') : ''}`
+
+  const action = parts.length && parts[0].startsWith('Compré') ? 'Compré más' : parts[0]?.startsWith('Vendí') ? 'Vendí' : 'Modifiqué'
+  return `• [${date} ${time}] ✏️ ${action} ${c.name} (${c.ticker}) en ${acct}: ${parts.join(' | ')}`
 }
 
 export function formatChangesForMessage(changes: PortfolioChange[]): string {
