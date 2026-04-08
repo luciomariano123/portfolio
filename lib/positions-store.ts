@@ -24,33 +24,33 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-const POSITIONS_KEY = 'cedear_positions_v4'   // bumped to v4: GOOGL+NVDA Agro, YPF vendido, PAMP Lucio corregido, TGSU2 eliminado
+const POSITIONS_KEY = 'cedear_positions_v4'   // bumped to v4: updated portfolios Apr 2026
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
-// Real positions — Balanz Lucio + Balanz Agropecuaria (actualizado 31-mar-2026)
-// Cambios vs v3: PAMP Lucio 5888→4502 (ppc $3.27), eliminado TGSU2 Lucio, vendido YPF (ambas cuentas),
-//                agregado GOOGL Agro (1386 @ $4.99), NVDA Agro (644 @ $7.31)
+// Real positions — Balanz Lucio + Balanz Agropecuaria
 // tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
 const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
-  { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1, quantity: 3091, ppc: 1.59,  account: 'Lucio' },
-  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70, account: 'Lucio' },
-  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 311,  ppc: 29.01, account: 'Lucio' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 760,  ppc: 15.24, account: 'Lucio' },
-  { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 78,   ppc: 50.93, account: 'Lucio' },
-  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 26.77, account: 'Lucio' },
-  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 96,   ppc: 33.72, account: 'Lucio' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 4502, ppc: 3.27,  account: 'Lucio' },
+  { ticker: 'AAPL',  tickerYF: 'AAPLD.BA',  name: 'Apple',           sector: 'Tecnología', ratio: 1, quantity: 766,  ppc: 12.8520496,  account: 'Lucio' },
+  { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1, quantity: 3091, ppc: 1.59010029,  account: 'Lucio' },
+  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 673,  ppc: 34.0499406,  account: 'Lucio' },
+  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.6998192,  account: 'Lucio' },
+  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 510,  ppc: 27.3113529,  account: 'Lucio' },
+  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 1144, ppc: 14.4238986,  account: 'Lucio' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 675,  ppc: 7.29820741,  account: 'Lucio' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 4502, ppc: 3.27319191,  account: 'Lucio' },
+  { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 78,   ppc: 50.9270513,  account: 'Lucio' },
+  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 760,  ppc: 19.3875526,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.99,  account: 'Agro' },
-  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.31,  account: 'Agro' },
-  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.13, account: 'Agro' },
-  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.50, account: 'Agro' },
-  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 641,  ppc: 8.53,  account: 'Agro' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 633,  ppc: 14.74, account: 'Agro' },
-  { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 65,   ppc: 51.29, account: 'Agro' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 2719, ppc: 3.53,  account: 'Agro' },
+  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.98556999,  account: 'Agro' },
+  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.1329114,  account: 'Agro' },
+  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.4978723,  account: 'Agro' },
+  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 633,  ppc: 14.7424961,  account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.3136646,   account: 'Agro' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 2719, ppc: 3.5310776,   account: 'Agro' },
+  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 641,  ppc: 8.53198128,  account: 'Agro' },
+  { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 65,   ppc: 51.2923077,  account: 'Agro' },
 ]
 
 export function loadPositions(): EditablePosition[] {
@@ -122,31 +122,6 @@ export function mergeAccounts(positions: EditablePosition[]): EditablePosition[]
   return Array.from(map.values())
 }
 
-// ─── Cash / Liquidez per account ────────────────────────────────────────────
-const CASH_KEY = 'portfolio_cash_v2'  // bumped to v2: Lucio $71,414 default (31-mar-2026)
-
-export interface AccountCash {
-  Lucio: number
-  Agro: number
-}
-
-const DEFAULT_CASH: AccountCash = { Lucio: 71414, Agro: 6638 }
-
-export function loadCash(): AccountCash {
-  if (typeof window === 'undefined') return DEFAULT_CASH
-  try {
-    const raw = localStorage.getItem(CASH_KEY)
-    return raw ? JSON.parse(raw) : DEFAULT_CASH
-  } catch {
-    return DEFAULT_CASH
-  }
-}
-
-export function saveCash(cash: AccountCash): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(CASH_KEY, JSON.stringify(cash))
-}
-
 // Known tickers for the "Add position" autocomplete — BYMA USD D-class tickers
 export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name' | 'sector' | 'ratio'>[] = [
   // Energía Argentina
@@ -159,7 +134,7 @@ export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1 },
   { ticker: 'AAPL',  tickerYF: 'AAPLD.BA',  name: 'Apple',           sector: 'Tecnología', ratio: 1 },
   { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1 },
-  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1 },
+  { ticker: 'GOOGL', tickerYF: 'GOOGLD.BA', name: 'Google',          sector: 'Tecnología', ratio: 1 },
   { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1 },
   { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1 },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1 },
@@ -171,7 +146,8 @@ export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name
   { ticker: 'QQQ',   tickerYF: 'QQQD.BA',   name: 'Nasdaq 100 ETF',  sector: 'ETF',        ratio: 1 },
   { ticker: 'EWZ',   tickerYF: 'EWZD.BA',   name: 'Brazil ETF',      sector: 'ETF',        ratio: 1 },
   { ticker: 'ARKK',  tickerYF: 'ARKKD.BA',  name: 'ARK Innovation',  sector: 'ETF',        ratio: 1 },
-  // Financiero Argentina
+  // Financiero
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1 },
   { ticker: 'GGAL',  tickerYF: 'GGALD.BA',  name: 'Grupo Galicia',   sector: 'Financiero', ratio: 1 },
   { ticker: 'BMA',   tickerYF: 'BMAD.BA',   name: 'Banco Macro',     sector: 'Financiero', ratio: 1 },
   { ticker: 'BBAR',  tickerYF: 'BBARD.BA',  name: 'Banco Francés',   sector: 'Financiero', ratio: 1 },

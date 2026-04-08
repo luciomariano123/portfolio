@@ -22,9 +22,6 @@ interface PriceInfo {
   change: number
   changePct: number
   value: number
-  cost: number     // total cost basis (qty × avg ppc)
-  pnl: number      // unrealized P&L
-  pnlPct: number   // pnl / cost × 100
 }
 
 interface FetchPricesResult {
@@ -50,12 +47,9 @@ async function fetchPrices(): Promise<FetchPricesResult> {
         const changePct = q.regularMarketChangePercent ?? 0
 
         // Sum quantity across all accounts for this ticker
-        const same     = DEFAULT_POSITIONS.filter(p => p.tickerYF === pos.tickerYF)
-        const totalQty = same.reduce((s, p) => s + p.quantity, 0)
-        const totalCost = same.reduce((s, p) => s + p.quantity * p.ppc, 0)
-        const value    = totalQty * price
-        const pnl      = value - totalCost
-        const pnlPct   = totalCost > 0 ? (pnl / totalCost) * 100 : 0
+        const totalQty = DEFAULT_POSITIONS
+          .filter(p => p.tickerYF === pos.tickerYF)
+          .reduce((s, p) => s + p.quantity, 0)
 
         results.push({
           ticker: pos.ticker,
@@ -63,10 +57,7 @@ async function fetchPrices(): Promise<FetchPricesResult> {
           price,
           change,
           changePct,
-          value,
-          cost: totalCost,
-          pnl,
-          pnlPct,
+          value: totalQty * price,
         })
       } catch {
         // skip failed
@@ -126,9 +117,8 @@ async function fetchNews(tickers: string[]): Promise<string[]> {
 
 const SECTOR_MAP: Record<string, string> = {
   'AMZN': 'Tecnología', 'MELI': 'Tecnología', 'META': 'Tecnología', 'MSFT': 'Tecnología',
-  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'GOGL': 'Tecnología', 'NVDA': 'Tecnología',
-  'SPY': 'ETF',
-  'PAMP': 'Energía',
+  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'SPY': 'ETF',
+  'PAMP': 'Energía', 'TGSU2': 'Energía', 'YPF': 'Energía',
   'KO': 'Consumo', 'MCD': 'Consumo', 'PEP': 'Consumo',
 }
 
@@ -136,11 +126,10 @@ interface FormatReportOptions {
   ccl?: number
   firedAlerts?: string[]
   isWeekly?: boolean
-  changesText?: string
 }
 
 function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): string {
-  const { ccl = 0, firedAlerts = [], isWeekly = false, changesText = '' } = options
+  const { ccl = 0, firedAlerts = [], isWeekly = false } = options
 
   const total = prices.reduce((s, p) => s + p.value, 0)
 
@@ -225,23 +214,13 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
 
   if (top3up.length) {
     msg += `🚀 *Mejores hoy*\n`
-    for (const p of top3up) {
-      const dailyUSD = p.change * (p.price > 0 ? p.value / p.price : 0)
-      const impactPct = totalComplete > 0 ? (dailyUSD / totalComplete) * 100 : 0
-      const pnlStr = p.pnl >= 0 ? `+${fmtSign(p.pnl)}` : fmtSign(p.pnl)
-      msg += `  🟢 ${p.ticker} ${fmtPct(p.changePct)} | hoy: +${fmt(dailyUSD)} (+${impactPct.toFixed(2)}% cartera) | P&L total: ${pnlStr} (${fmtPct(p.pnlPct)})\n`
-    }
+    for (const p of top3up) msg += `  🟢 ${p.ticker} ${fmtPct(p.changePct)}\n`
     msg += '\n'
   }
 
   if (top3down.length) {
     msg += `📉 *Peores hoy*\n`
-    for (const p of top3down) {
-      const dailyUSD = p.change * (p.price > 0 ? p.value / p.price : 0)
-      const impactPct = totalComplete > 0 ? (dailyUSD / totalComplete) * 100 : 0
-      const pnlStr = p.pnl >= 0 ? `+${fmtSign(p.pnl)}` : fmtSign(p.pnl)
-      msg += `  🔴 ${p.ticker} ${fmtPct(p.changePct)} | hoy: ${fmtSign(dailyUSD)} (${impactPct.toFixed(2)}% cartera) | P&L total: ${pnlStr} (${fmtPct(p.pnlPct)})\n`
-    }
+    for (const p of top3down) msg += `  🔴 ${p.ticker} ${fmtPct(p.changePct)}\n`
     msg += '\n'
   }
 
@@ -288,11 +267,6 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
     msg += '\n'
   }
 
-  // Recent portfolio changes (passed from client-side localStorage)
-  if (changesText) {
-    msg += `\n${changesText}\n\n`
-  }
-
   msg += `_Enviado automáticamente · Portfolio App_`
   return msg
 }
@@ -326,7 +300,7 @@ async function sendWhatsApp(to: string, text: string): Promise<boolean> {
 
 export async function POST(req: NextRequest) {
   // Auth: cron uses ?secret=..., manual calls pass it in body
-  const { secret, recipients: bodyRecipients, firedAlerts, changesText } = await req.json().catch(() => ({} as Record<string, unknown>))
+  const { secret, recipients: bodyRecipients, firedAlerts } = await req.json().catch(() => ({} as Record<string, unknown>))
 
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -354,9 +328,8 @@ export async function POST(req: NextRequest) {
   const news   = await fetchNews(prices.map(p => p.ticker))
 
   const alerts = Array.isArray(firedAlerts) ? (firedAlerts as string[]) : []
-  const changesStr = typeof changesText === 'string' ? changesText : ''
 
-  let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly, changesText: changesStr })
+  let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly })
   if (news.length > 0) {
     message += `\n\n📰 *Noticias*\n${news.join('\n')}`
   }

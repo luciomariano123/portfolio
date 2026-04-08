@@ -3,14 +3,13 @@
 import { useMemo, useState } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA, INITIAL_CAPITAL } from '@/lib/portfolio-data'
+import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA } from '@/lib/portfolio-data'
 import { SummaryCards } from '@/components/SummaryCards'
 import { EvolutionChart } from '@/components/EvolutionChart'
 import { SectorChart } from '@/components/SectorChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, CheckCircle } from 'lucide-react'
-import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -29,12 +28,10 @@ export default function DashboardPage() {
     setSendError('')
     try {
       const recipients = JSON.parse(localStorage.getItem('whatsapp_recipients_v1') ?? '[]') as string[]
-      const recentChanges = loadRecentChanges(7)
-      const changesText = formatChangesForMessage(recentChanges)
       const res = await fetch('/api/whatsapp/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients, changesText }),
+        body: JSON.stringify({ secret: 'portfolio_cron_2026', recipients }),
       })
       const data = await res.json().catch(() => ({})) as { error?: string; preview?: string; sent?: number }
       if (res.ok) {
@@ -100,18 +97,17 @@ export default function DashboardPage() {
   }, [positions, prices])
 
   const ytdReturn = useMemo(() => {
-    const currentYear = new Date().getFullYear()
-    const ytdBase = HISTORICAL_DATA.filter(d => d.date <= `${currentYear - 1}-12-31`).at(-1)
-    const base = ytdBase?.quotaPart ?? INITIAL_CAPITAL
+    const ytdStart = HISTORICAL_DATA.find(d => d.date >= '2026-01-01')
     const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!last) return 0
-    return ((last.quotaPart - base) / base) * 100
+    if (!ytdStart || !last) return 0
+    return ((last.quotaPart - ytdStart.quotaPart) / ytdStart.quotaPart) * 100
   }, [])
 
   const totalReturn = useMemo(() => {
+    const first = HISTORICAL_DATA[0]
     const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!last) return 0
-    return ((last.quotaPart - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100
+    if (!first || !last) return 0
+    return ((last.quotaPart - first.quotaPart) / first.quotaPart) * 100
   }, [])
 
   if (!mounted) return null

@@ -52,86 +52,37 @@ export function clearChanges(): void {
 }
 
 function fmtQty(n: number) { return n.toLocaleString('es-AR') }
-function fmtUSD(n: number) {
-  const abs = Math.abs(n)
-  const formatted = abs >= 1000
-    ? abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-    : abs.toFixed(2)
-  return `${n < 0 ? '-' : ''}$${formatted}`
-}
-function fmtPct(n: number) { return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%` }
-function fmtSign(n: number) { return `${n >= 0 ? '+' : ''}${fmtUSD(n)}` }
+function fmtUSD(n: number) { return `$${n.toFixed(2)}` }
 
 function describeChange(c: PortfolioChange): string {
   const acct = c.account === 'Lucio' ? 'Lucio' : 'Agro'
   const date = new Date(c.timestamp).toLocaleDateString('es-AR', {
-    day: '2-digit', month: '2-digit',
+    day: '2-digit', month: '2-digit', year: '2-digit',
   })
   const time = new Date(c.timestamp).toLocaleTimeString('es-AR', {
     hour: '2-digit', minute: '2-digit',
   })
 
   if (c.type === 'add') {
-    const qty = c.quantityAfter ?? 0
-    const ppc = c.ppcAfter ?? 0
-    const totalInvested = qty * ppc
-    return [
-      `➕ *${c.ticker}* — ${c.name} (${acct}) · ${date} ${time}`,
-      `   Compra: ${fmtQty(qty)} láminas a ${fmtUSD(ppc)}/lám`,
-      `   💵 Invertido: ${fmtUSD(totalInvested)}`,
-    ].join('\n')
+    return `• [${date} ${time}] ➕ Agregué ${c.name} (${c.ticker}) en ${acct}: ${fmtQty(c.quantityAfter ?? 0)} láminas a ${fmtUSD(c.ppcAfter ?? 0)}`
   }
-
   if (c.type === 'remove') {
-    const qty = c.quantityBefore ?? 0
-    const ppc = c.ppcBefore ?? 0
-    return [
-      `❌ *${c.ticker}* — ${c.name} (${acct}) · ${date} ${time}`,
-      `   Posición eliminada: ${fmtQty(qty)} láminas (costo ${fmtUSD(qty * ppc)})`,
-    ].join('\n')
+    return `• [${date} ${time}] ❌ Eliminé ${c.name} (${c.ticker}) de ${acct} (tenía ${fmtQty(c.quantityBefore ?? 0)} láminas)`
   }
-
   // update
-  const qB = c.quantityBefore ?? 0
-  const qA = c.quantityAfter ?? 0
-  const pB = c.ppcBefore ?? 0
-  const pA = c.ppcAfter ?? 0
-  const lines: string[] = []
-
-  const qDiff = qA - qB
-  const isBuy = qDiff > 0
-
-  if (qDiff !== 0) {
-    const pctOfPos = qB > 0 ? (Math.abs(qDiff) / qB) * 100 : 0
-    const valueOfOp = Math.abs(qDiff) * (isBuy ? pA : pB)
-    const remainingCost = qA * pA
-    // P&L implícito: diferencia de costo base antes vs después
-    const costBefore = qB * pB
-    const costAfter  = qA * pA
-    const pnlDelta   = costAfter - costBefore  // cuánto aumentó/disminuyó el costo total
-
-    lines.push(
-      `${isBuy ? '🟢' : '🔴'} *${c.ticker}* — ${c.name} (${acct}) · ${date} ${time}`,
-      `   ${isBuy ? 'Compra' : 'Venta'}: ${fmtQty(qB)} → ${fmtQty(qA)} lám (${isBuy ? '+' : '-'}${Math.abs(qDiff).toLocaleString('es-AR')} · ${fmtPct(isBuy ? pctOfPos : -pctOfPos)} de la posición)`,
-      `   💵 ${isBuy ? 'Invertido' : 'Realizado'}: ${fmtUSD(valueOfOp)}`,
-      `   📦 Tenencia restante: ${fmtQty(qA)} lám = ${fmtUSD(remainingCost)} (PPC ${fmtUSD(pA)})`,
-      `   📊 Costo total ${isBuy ? 'aumentó' : 'bajó'}: ${fmtSign(pnlDelta)}`,
-    )
-  } else if (Math.abs(pB - pA) > 0.001) {
-    // solo PPC cambió
-    const pnlDiff = (pA - pB) * qA
-    lines.push(
-      `✏️ *${c.ticker}* — ${c.name} (${acct}) · ${date} ${time}`,
-      `   PPC: ${fmtUSD(pB)} → ${fmtUSD(pA)} | ${fmtQty(qA)} láminas`,
-      `   📊 Impacto en costo base: ${fmtSign(pnlDiff)}`,
-    )
+  const parts: string[] = []
+  if (c.quantityBefore !== c.quantityAfter && c.quantityBefore !== undefined && c.quantityAfter !== undefined) {
+    const diff = c.quantityAfter - c.quantityBefore
+    parts.push(`cantidad: ${fmtQty(c.quantityBefore)} → ${fmtQty(c.quantityAfter)} (${diff > 0 ? '+' : ''}${fmtQty(diff)})`)
   }
-
-  return lines.join('\n')
+  if (c.ppcBefore !== undefined && c.ppcAfter !== undefined && Math.abs(c.ppcBefore - c.ppcAfter) > 0.001) {
+    parts.push(`PPC: ${fmtUSD(c.ppcBefore)} → ${fmtUSD(c.ppcAfter)}`)
+  }
+  return `• [${date} ${time}] ✏️ Modifiqué ${c.name} (${c.ticker}) en ${acct}${parts.length ? ': ' + parts.join(', ') : ''}`
 }
 
 export function formatChangesForMessage(changes: PortfolioChange[]): string {
   if (changes.length === 0) return ''
-  const blocks = changes.map(describeChange)
-  return `📊 *Cambios recientes en la cartera:*\n\n${blocks.join('\n\n')}`
+  const lines = changes.map(describeChange)
+  return `📊 *Cambios recientes en la cartera:*\n${lines.join('\n')}`
 }

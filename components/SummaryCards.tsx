@@ -3,7 +3,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, DollarSign, Activity, Wallet } from 'lucide-react'
-import { HISTORICAL_DATA, INITIAL_CAPITAL } from '@/lib/portfolio-data'
 
 interface SummaryCardsProps {
   totalValueUSD: number
@@ -16,19 +15,6 @@ interface SummaryCardsProps {
   loading: boolean
 }
 
-// Calculate year P&L from historical data only (no live prices — avoids stale after-hours distortion)
-function yearPnl(year: number): { abs: number; pct: number } {
-  const startVal = year === 2024
-    ? INITIAL_CAPITAL
-    : (HISTORICAL_DATA.filter(d => d.date <= `${year - 1}-12-31`).at(-1)?.quotaPart ?? INITIAL_CAPITAL)
-  // For current year: last snapshot this year; for past years: last snapshot of that year
-  const endEntry = HISTORICAL_DATA.filter(d => d.date.startsWith(String(year))).at(-1)
-  if (!endEntry) return { abs: 0, pct: 0 }
-  const abs = endEntry.quotaPart - startVal
-  const pct = startVal > 0 ? (abs / startVal) * 100 : 0
-  return { abs, pct }
-}
-
 export function SummaryCards({
   totalValueUSD,
   totalPnlUSD,
@@ -39,20 +25,6 @@ export function SummaryCards({
   dolarBlue,
   loading,
 }: SummaryCardsProps) {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-
-  // P&L desde inicio (vs INITIAL_CAPITAL)
-  const inceptionPnl = totalValueUSD - INITIAL_CAPITAL
-  const inceptionPct = (inceptionPnl / INITIAL_CAPITAL) * 100
-
-  // Year breakdowns
-  const years = [2024, 2025, currentYear].filter((y, i, arr) => arr.indexOf(y) === i)
-  const yearBreakdown = years.map(y => {
-    const { pct } = yearPnl(y)
-    return `${y}: ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
-  }).join(' · ')
-
   const cards = [
     {
       title: 'Valor Total Cartera',
@@ -64,18 +36,14 @@ export function SummaryCards({
       highlight: false,
     },
     {
-      title: 'P&L Desde Inicio',
-      icon: inceptionPct >= 0 ? TrendingUp : TrendingDown,
-      iconColor: inceptionPct >= 0 ? 'text-emerald-400' : 'text-red-400',
-      iconBg: inceptionPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
-      value: loading ? null : (inceptionPnl >= 0 ? '+' : '') + formatCurrency(inceptionPnl),
-      sub: loading ? null : `${formatPercent(inceptionPct)} vs $200k inicial`,
-      valueColor: getPnlColor(inceptionPnl),
+      title: 'P&L Total',
+      icon: totalPnlPct >= 0 ? TrendingUp : TrendingDown,
+      iconColor: totalPnlPct >= 0 ? 'text-emerald-400' : 'text-red-400',
+      iconBg: totalPnlPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
+      value: loading ? null : (totalPnlUSD >= 0 ? '+' : '') + formatCurrency(totalPnlUSD),
+      sub: loading ? null : formatPercent(totalPnlPct) + ' desde compra',
+      valueColor: getPnlColor(totalPnlUSD),
       highlight: false,
-      yearChips: loading ? null : years.map(y => {
-        const { pct } = yearPnl(y)
-        return { year: y, pct }
-      }),
     },
     {
       title: 'Variación del Día',
@@ -117,22 +85,6 @@ export function SummaryCards({
                   <div className="h-4 w-24 bg-slate-700/60 rounded animate-pulse mt-1" />
                 ) : (
                   <p className="text-xs text-slate-500 mt-1">{card.sub}</p>
-                )}
-                {'yearChips' in card && card.yearChips && (
-                  <div className="flex gap-1.5 mt-2 flex-wrap">
-                    {card.yearChips.map(({ year, pct }: { year: number; pct: number }) => (
-                      <span
-                        key={year}
-                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${
-                          pct >= 0
-                            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                            : 'text-red-400 bg-red-500/10 border-red-500/20'
-                        }`}
-                      >
-                        {year} {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
-                      </span>
-                    ))}
-                  </div>
                 )}
               </div>
               <div className={`w-10 h-10 rounded-xl ${card.iconBg} flex items-center justify-center flex-shrink-0 ml-3`}>

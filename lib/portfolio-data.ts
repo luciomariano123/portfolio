@@ -97,84 +97,45 @@ export function getConsolidatedPositions(): Position[] {
   return result
 }
 
-// Cash positions (actualizado 31-mar-2026)
+// Cash positions
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 71414, account: 'Lucio' },
-  { currency: 'USD', amount: 6638,  account: 'Agro'  },
+  { currency: 'USD', amount: 3978, account: 'Lucio' },
+  { currency: 'ARS', amount: 200000, account: 'Agro' },
+  { currency: 'USD', amount: 6638, account: 'Agro' },
 ]
 
 // Fixed Income — Obligaciones Negociables
 // nominal = face value in USD; coupon = nominal × rate/2 per semi-annual payment
 // onTicker = BYMA USD ticker (D-class, e.g. TTC9D.BA) for live price fetching
 export const FIXED_INCOME: FixedIncomePosition[] = [
-  // Total nominal = $66,561 (coincide con "ONs al 7%" en CONSOLIDADO/BALANZ AGRO)
-  { name: 'ON IRSA C23', onTicker: 'IRCOD.BA',  nominal: 6661,  rate: 7.25, account: 'Agro', maturity: '2029-10-23' },
-  { name: 'ON TEC 9',    onTicker: 'TTC9D.BA',  nominal: 30000, rate: 6.80, account: 'Agro', maturity: '2029-10-24' },
-  { name: 'ON PAE 36',   onTicker: 'PN36D.BA',  nominal: 20000, rate: 7.25, account: 'Agro', maturity: '2031-11-13' },
-  { name: 'ON TECO 23',  onTicker: 'TLCOOD.BA', nominal: 9900,  rate: 7.00, account: 'Agro', maturity: '2029-05-28' },
+  { name: 'ON TEC C9',   onTicker: 'TTC9D.BA', nominal: 7100,  rate: 6.80, account: 'Lucio', maturity: '2029-10-24' },
+  { name: 'ON PAE C36',  onTicker: 'PN36D.BA',  nominal: 30000, rate: 6.80, account: 'Lucio', maturity: '2026-11-13' },
+  { name: 'ON IRSA C23', onTicker: 'IRCOD.BA',  nominal: 29565, rate: 7.25, account: 'Agro',  maturity: '2029-10-23' },
 ]
 
-// Coupon payment schedule
-// IRSA C23: $6,661  × 7.25% / 2 = $241.46  — 23-jul + 23-ene
-// TEC 9:    $30,000 × 6.80% / 2 = $1,020   — 24-abr + 24-oct
-// PAE 36:   $20,000 × 7.25% / 2 = $725     — 13-may + 13-nov
-// TECO 23:  $9,900  × 7.00% / 2 = $346.50  — 28-may + 28-nov
-// Green = paid (2025 coupons + ene-26 IRSA)
+// Coupon payment schedule (2026–2027)
+// TEC C9:  $7,100  × 6.80% / 2 = $241.40  — Jan + Jul
+// PAE C36: $30,000 × 6.80% / 2 = $1,020   — Apr + Oct
+// IRSA:    $29,565 × 7.25% / 2 = $1,071.73 ≈ $1,071.50 — May + Nov
 export const COUPON_SCHEDULE: CouponPayment[] = [
-  // ── IRSA C23 (23-ene + 23-jul) ────────────────────────────────────────────
-  { date: '2026-01-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: true  },
-  { date: '2026-07-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2027-01-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2027-07-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2028-01-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2028-07-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2029-01-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2029-07-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2029-10-23', amount: 241.46, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  // ── TEC 9 (24-abr + 24-oct) ──────────────────────────────────────────────
-  { date: '2026-04-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2026-10-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2027-04-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2027-10-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2028-04-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2028-10-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2029-04-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  { date: '2029-10-24', amount: 1020.00, onName: 'ON TEC 9',   onTicker: 'TTC9D.BA',  paid: false },
-  // ── PAE 36 (13-may + 13-nov) ─────────────────────────────────────────────
-  { date: '2026-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2026-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2027-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2027-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2028-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2028-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2029-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2029-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2030-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2030-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2031-05-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  { date: '2031-11-13', amount: 725.00, onName: 'ON PAE 36',   onTicker: 'PN36D.BA',  paid: false },
-  // ── TECO 23 (28-may + 28-nov) ────────────────────────────────────────────
-  { date: '2026-05-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2026-11-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2027-05-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2027-11-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2028-05-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2028-11-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
-  { date: '2029-05-28', amount: 346.50, onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
+  { date: '2026-01-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: true  },
+  { date: '2026-04-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
+  { date: '2026-05-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2026-07-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
+  { date: '2026-10-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
+  { date: '2026-11-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2027-01-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
+  { date: '2027-04-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
+  { date: '2027-05-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2027-07-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
+  { date: '2027-10-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
+  { date: '2027-11-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
 ]
-
-// Capital inicial de la cartera (Oct 2024)
-export const INITIAL_CAPITAL = 200000
 
 // Historical evolution data from "Evolucion TOTAL" sheet (real weekly snapshots)
 // Values = total portfolio in USD (CEDEARs + cash + ONs at market)
-// Start: Oct 1, 2024 — End: Mar 21, 2026
+// Start: Nov 9, 2024 (first consolidated snapshot) — End: Mar 21, 2026
 export const HISTORICAL_DATA: HistoricalPoint[] = [
-  { date: '2024-10-01', quotaPart: 200500.00 },
-  { date: '2024-10-16', quotaPart: 202958.10 },
-  { date: '2024-10-21', quotaPart: 202148.10 },
-  { date: '2024-10-27', quotaPart: 203267.10 },
-  { date: '2024-11-01', quotaPart: 202454.20 },
   { date: '2024-11-09', quotaPart: 204161.13 },
   { date: '2024-11-30', quotaPart: 212499.37 },
   { date: '2024-12-07', quotaPart: 212358.84 },
@@ -185,7 +146,6 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2025-01-31', quotaPart: 218866.27 },
   { date: '2025-02-08', quotaPart: 214621.68 },
   { date: '2025-02-22', quotaPart: 214853.16 },
-  { date: '2025-03-12', quotaPart: 201370.70 },
   { date: '2025-03-14', quotaPart: 208654.12 },
   { date: '2025-03-22', quotaPart: 209189.85 },
   { date: '2025-04-01', quotaPart: 202985.71 },
@@ -229,7 +189,6 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-02-22', quotaPart: 241184.90 },
   { date: '2026-03-08', quotaPart: 237894.85 },
   { date: '2026-03-21', quotaPart: 242531.17 },
-  { date: '2026-03-31', quotaPart: 250321.00 },
 ]
 
 // CEDEAR ratios — láminas per 1 ADR

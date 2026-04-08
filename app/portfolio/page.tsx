@@ -4,16 +4,15 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
 import { EditPositionModal } from '@/components/EditPositionModal'
-import { ImportTradesModal } from '@/components/ImportTradesModal'
-import { EditablePosition, loadCash, saveCash, AccountCash } from '@/lib/positions-store'
+import { EditablePosition } from '@/lib/positions-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
-import { SECTOR_COLORS, FIXED_INCOME } from '@/lib/portfolio-data'
+import { SECTOR_COLORS } from '@/lib/portfolio-data'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
-  TrendingUp, TrendingDown, Minus, AlertCircle, Check, FileImage,
+  TrendingUp, TrendingDown, Minus, AlertCircle,
 } from 'lucide-react'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -88,31 +87,6 @@ export default function PortfolioPage() {
   const [tab, setTab] = useState<TabType>('positions')
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<EditablePosition | null>(null)
-  const [showImport, setShowImport] = useState(false)
-
-  // Liquidez (cash) per account — persisted in localStorage
-  const [cash, setCash] = useState<AccountCash>({ Lucio: 0, Agro: 0 })
-  const [editingCash, setEditingCash] = useState<'Lucio' | 'Agro' | null>(null)
-  const [cashInput, setCashInput] = useState('')
-  useEffect(() => { setCash(loadCash()) }, [])
-
-  function startEditCash(account: 'Lucio' | 'Agro') {
-    setEditingCash(account)
-    setCashInput(cash[account].toString())
-  }
-  function commitCash() {
-    if (!editingCash) return
-    const val = parseFloat(cashInput)
-    const updated = { ...cash, [editingCash]: isNaN(val) ? 0 : val }
-    setCash(updated)
-    saveCash(updated)
-    setEditingCash(null)
-  }
-
-  // Cash shown for current filter
-  const cashForFilter: number = filter === 'all'
-    ? cash.Lucio + cash.Agro
-    : filter === 'Lucio' ? cash.Lucio : cash.Agro
 
   const displayPositions = useMemo(() => {
     if (filter === 'all') return consolidated
@@ -182,19 +156,20 @@ export default function PortfolioPage() {
 
   const totalValue = rows.reduce((s, r) => s + r.currentValueUSD, 0)
 
-  // Auto-save daily snapshot — always uses CONSOLIDATED positions (not filtered view)
+  // Feature 4: Total real portfolio value (CEDEARs + cash + ONs)
+  const totalPortfolio = useMemo(() => {
+    if (typeof window === 'undefined') return summary.totalValue
+    return computeTotalPortfolioValue(summary.totalValue)
+  }, [summary.totalValue])
+
+  // Auto-save daily snapshot once prices are loaded
   const snapshotSavedRef = useRef(false)
   useEffect(() => {
-    if (loading || snapshotSavedRef.current) return
-    // Compute consolidated CEDEAR value regardless of current filter
-    const consolidatedCEDEARValue = consolidated.reduce((sum, pos) => {
-      return sum + pos.quantity * (prices[pos.tickerYF]?.price ?? 0)
-    }, 0)
-    if (consolidatedCEDEARValue <= 0) return
+    if (loading || summary.totalValue <= 0 || snapshotSavedRef.current) return
     snapshotSavedRef.current = true
-    const total = computeTotalPortfolioValue(consolidatedCEDEARValue)
+    const total = computeTotalPortfolioValue(summary.totalValue)
     saveTodaySnapshot(total)
-  }, [loading, consolidated, prices])
+  }, [loading, summary.totalValue])
 
   // Feature 5: Treemap data
   const treemapData = useMemo(() => {
@@ -231,15 +206,6 @@ export default function PortfolioPage() {
             <RefreshCw size={13} />
           </button>
           <button
-            onClick={() => setShowImport(true)}
-            disabled={filter === 'all'}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-sm font-medium transition-colors"
-            title={filter === 'all' ? 'Seleccioná Lucio o Agro para importar' : 'Importar boletos desde imagen'}
-          >
-            <FileImage size={14} />
-            Importar
-          </button>
-          <button
             onClick={() => { setEditTarget(null); setShowModal(true) }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
           >
@@ -254,22 +220,8 @@ export default function PortfolioPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500 mb-1">Valor total (USD)</p>
-            {(() => {
-              const onValue = FIXED_INCOME
-                .filter(f => filter === 'all' || f.account === filter)
-                .reduce((s, f) => s + f.nominal, 0)
-              const displayTotal = summary.totalValue + cashForFilter + onValue
-              return (
-                <>
-                  <p className="text-base font-bold font-mono truncate text-slate-100">{formatCurrency(displayTotal)}</p>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    CEDEARs {formatCurrency(summary.totalValue)}
-                    {cashForFilter > 0 && ` · Cash ${formatCurrency(cashForFilter)}`}
-                    {onValue > 0 && ` · ONs ${formatCurrency(onValue)}`}
-                  </p>
-                </>
-              )
-            })()}
+            <p className="text-base font-bold font-mono truncate text-slate-100">{formatCurrency(totalPortfolio)}</p>
+            <p className="text-xs text-slate-500 font-mono mt-0.5">CEDEARs: {formatCurrency(summary.totalValue)}</p>
           </CardContent>
         </Card>
         {[
@@ -402,113 +354,6 @@ export default function PortfolioPage() {
                       </tr>
                     )
                   })}
-                  {/* ── ONs rows ── */}
-                  {FIXED_INCOME
-                    .filter(f => filter === 'all' || f.account === filter)
-                    .map(f => (
-                      <tr key={f.onTicker} className="hover:bg-slate-700/20 transition-colors border-t border-slate-600/40">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-bold text-amber-400">ON</span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-slate-100">{f.name}</p>
-                              <p className="text-xs text-slate-500">{f.account} · vto {new Date(f.maturity).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-amber-400 bg-amber-500/10 border-amber-500/20">
-                            Renta Fija
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 font-mono text-slate-400 text-xs">{f.rate}%</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">{formatCurrency(f.nominal)}</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3" />
-                      </tr>
-                    ))
-                  }
-                  {/* ── LIQUIDEZ row ── */}
-                  {(filter === 'Lucio' || filter === 'Agro' || filter === 'all') && (() => {
-                    const accts: ('Lucio' | 'Agro')[] = filter === 'all' ? ['Lucio', 'Agro'] : [filter as 'Lucio' | 'Agro']
-                    return accts.map(acct => (
-                      <tr key={`cash_${acct}`} className="hover:bg-slate-700/20 transition-colors group border-t border-slate-600/40">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-slate-600/60 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-bold text-slate-300">$</span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-slate-100">LIQUIDEZ</p>
-                              <p className="text-xs text-slate-500">{acct}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-slate-400 bg-slate-500/10 border-slate-500/20">
-                            Efectivo
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">
-                          {editingCash === acct ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-400 text-sm">$</span>
-                              <input
-                                autoFocus
-                                type="number"
-                                min="0"
-                                step="100"
-                                className="w-24 bg-slate-700 border border-indigo-500 rounded px-2 py-0.5 text-sm text-slate-100 focus:outline-none"
-                                value={cashInput}
-                                onChange={e => setCashInput(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') commitCash(); if (e.key === 'Escape') setEditingCash(null) }}
-                                onBlur={commitCash}
-                              />
-                              <button onClick={commitCash} className="p-1 rounded hover:bg-slate-600 text-emerald-400">
-                                <Check size={12} />
-                              </button>
-                            </div>
-                          ) : (
-                            formatCurrency(cash[acct])
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3 text-slate-500">—</td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2 w-24">
-                            <div className="flex-1 h-1.5 bg-slate-700 rounded-full">
-                              <div className="h-full bg-slate-500 rounded-full"
-                                style={{ width: `${totalValue > 0 ? Math.min((cash[acct] / (totalValue + cashForFilter)) * 100, 100) : 0}%` }} />
-                            </div>
-                            <span className="text-xs text-slate-400 font-mono w-9 text-right">
-                              {totalValue > 0 ? ((cash[acct] / (totalValue + cashForFilter)) * 100).toFixed(1) : '0.0'}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => startEditCash(acct)}
-                              className="p-1.5 rounded hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors"
-                            >
-                              <Pencil size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  })()}
                 </tbody>
               </table>
             </div>
@@ -603,34 +448,7 @@ export default function PortfolioPage() {
         </CardContent>
       </Card>
 
-      {/* Import trades modal */}
-      {showImport && filter !== 'all' && (
-        <ImportTradesModal
-          account={filter as 'Lucio' | 'Agro'}
-          onApply={(mapped) => {
-            for (const { trade, pos } of mapped) {
-              const existing = positions.find(p => p.ticker === pos.ticker && p.account === pos.account)
-              if (existing) {
-                if (trade.tipo === 'COMPRA') {
-                  // Weighted average PPC
-                  const totalQty = existing.quantity + pos.quantity
-                  const newPpc = (existing.quantity * existing.ppc + pos.quantity * pos.ppc) / totalQty
-                  updatePosition(existing.ticker, existing.account, { quantity: totalQty, ppc: newPpc })
-                } else {
-                  // Sale: reduce quantity
-                  const newQty = Math.max(0, existing.quantity - pos.quantity)
-                  updatePosition(existing.ticker, existing.account, { quantity: newQty })
-                }
-              } else if (trade.tipo === 'COMPRA') {
-                addPosition(pos)
-              }
-            }
-          }}
-          onClose={() => setShowImport(false)}
-        />
-      )}
-
-      {/* Edit/Add modal */}
+      {/* Modal */}
       {showModal && (
         <EditPositionModal
           initial={editTarget ?? undefined}
