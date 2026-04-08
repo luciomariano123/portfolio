@@ -18,7 +18,7 @@ export function usePositions() {
 
   useEffect(() => {
     // One-time migration: seed changes store with boleto purchases (08/04/2026)
-    const MIGRATION_FLAG = 'portfolio_migration_v3v4_done'
+    const MIGRATION_FLAG = 'portfolio_migration_v3v4_v2_done'
     if (typeof window !== 'undefined' && !localStorage.getItem(MIGRATION_FLAG)) {
       localStorage.setItem(MIGRATION_FLAG, '1')  // set flag first to prevent double-run
       recordChange({ type: 'add',    ticker: 'AAPL', name: 'Apple',         account: 'Lucio', quantityAfter: 766,  ppcAfter: 12.82 })
