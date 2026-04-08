@@ -300,7 +300,7 @@ async function sendWhatsApp(to: string, text: string): Promise<boolean> {
 
 export async function POST(req: NextRequest) {
   // Auth: cron uses ?secret=..., manual calls pass it in body
-  const { secret, recipients: bodyRecipients, firedAlerts } = await req.json().catch(() => ({} as Record<string, unknown>))
+  const { secret, recipients: bodyRecipients, firedAlerts, portfolioChanges } = await req.json().catch(() => ({} as Record<string, unknown>))
 
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -332,6 +332,9 @@ export async function POST(req: NextRequest) {
   let message = formatReport(prices, { ccl, firedAlerts: alerts, isWeekly })
   if (news.length > 0) {
     message += `\n\n📰 *Noticias*\n${news.join('\n')}`
+  }
+  if (typeof portfolioChanges === 'string' && portfolioChanges.trim()) {
+    message += `\n\n${portfolioChanges}`
   }
 
   // Send to all recipients
