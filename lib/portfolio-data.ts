@@ -99,37 +99,58 @@ export function getConsolidatedPositions(): Position[] {
 
 // Cash positions
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 3978, account: 'Lucio' },
-  { currency: 'ARS', amount: 200000, account: 'Agro' },
-  { currency: 'USD', amount: 6638, account: 'Agro' },
+  { currency: 'USD', amount: 17304, account: 'Lucio' },
+  { currency: 'USD', amount: 6638,  account: 'Agro'  },
 ]
 
-// Fixed Income — Obligaciones Negociables
-// nominal = face value in USD; coupon = nominal × rate/2 per semi-annual payment
-// onTicker = BYMA USD ticker (D-class, e.g. TTC9D.BA) for live price fetching
+// Fixed Income — Obligaciones Negociables (todas en Agro)
 export const FIXED_INCOME: FixedIncomePosition[] = [
-  { name: 'ON TEC C9',   onTicker: 'TTC9D.BA', nominal: 7100,  rate: 6.80, account: 'Lucio', maturity: '2029-10-24' },
-  { name: 'ON PAE C36',  onTicker: 'PN36D.BA',  nominal: 30000, rate: 6.80, account: 'Lucio', maturity: '2026-11-13' },
-  { name: 'ON IRSA C23', onTicker: 'IRCOD.BA',  nominal: 29565, rate: 7.25, account: 'Agro',  maturity: '2029-10-23' },
+  { name: 'ON IRSA C23', onTicker: 'IRCOD.BA',  nominal: 6661,  rate: 7.25, account: 'Agro', maturity: '2029-10-23' },
+  { name: 'ON TEC 9',    onTicker: 'TTC9D.BA',  nominal: 30000, rate: 6.80, account: 'Agro', maturity: '2029-10-24' },
+  { name: 'ON PAE 36',   onTicker: 'PN36OD.BA', nominal: 20000, rate: 7.25, account: 'Agro', maturity: '2031-11-13' },
+  { name: 'ON TECO 23',  onTicker: 'TLCOOD.BA', nominal: 9900,  rate: 7.00, account: 'Agro', maturity: '2028-11-28' },
 ]
 
-// Coupon payment schedule (2026–2027)
-// TEC C9:  $7,100  × 6.80% / 2 = $241.40  — Jan + Jul
-// PAE C36: $30,000 × 6.80% / 2 = $1,020   — Apr + Oct
-// IRSA:    $29,565 × 7.25% / 2 = $1,071.73 ≈ $1,071.50 — May + Nov
+// Coupon payment schedule
+// IRSA C23:  $6,661  × 7.25% / 2 = $241.46  — Jan 23 + Jul 23
+// TEC 9:     $30,000 × 6.80% / 2 = $1,020   — Apr 24 + Oct 24
+// PAE 36:    $20,000 × 7.25% / 2 = $725     — May 13 + Nov 13
+// TECO 23:   $9,900  × 7.00% / 2 = $346.50  — May 28 + Nov 28
 export const COUPON_SCHEDULE: CouponPayment[] = [
-  { date: '2026-01-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: true  },
-  { date: '2026-04-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
-  { date: '2026-05-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2026-07-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
-  { date: '2026-10-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
-  { date: '2026-11-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2027-01-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
-  { date: '2027-04-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
-  { date: '2027-05-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
-  { date: '2027-07-15', amount: 241.46,  onName: 'ON TEC C9',   onTicker: 'TTC9D.BA', paid: false },
-  { date: '2027-10-15', amount: 1020.00, onName: 'ON PAE C36',  onTicker: 'PN36D.BA',  paid: false },
-  { date: '2027-11-15', amount: 1071.50, onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  // ── ON IRSA C23 ────────────────────────────────────────────────────────────
+  { date: '2026-07-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2027-01-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2027-07-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2028-01-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2028-07-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2029-01-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  { date: '2029-07-23', amount: 241.46,  onName: 'ON IRSA C23', onTicker: 'IRCOD.BA',  paid: false },
+  // ── ON TEC 9 ───────────────────────────────────────────────────────────────
+  { date: '2026-04-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2026-10-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2027-04-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2027-10-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2028-04-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2028-10-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  { date: '2029-04-24', amount: 1020.00, onName: 'ON TEC 9',    onTicker: 'TTC9D.BA',  paid: false },
+  // ── ON PAE 36 ──────────────────────────────────────────────────────────────
+  { date: '2026-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2026-11-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2027-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2027-11-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2028-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2028-11-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2029-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2029-11-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2030-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2030-11-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  { date: '2031-05-13', amount: 725.00,  onName: 'ON PAE 36',   onTicker: 'PN36OD.BA', paid: false },
+  // ── ON TECO 23 ─────────────────────────────────────────────────────────────
+  { date: '2026-05-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
+  { date: '2026-11-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
+  { date: '2027-05-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
+  { date: '2027-11-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
+  { date: '2028-05-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
 ]
 
 // Historical evolution data from "Evolucion TOTAL" sheet (real weekly snapshots)
