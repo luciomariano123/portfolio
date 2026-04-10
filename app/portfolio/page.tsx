@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
-import { SECTOR_COLORS } from '@/lib/portfolio-data'
+import { SECTOR_COLORS, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
   TrendingUp, TrendingDown, Minus, AlertCircle,
@@ -354,6 +354,97 @@ export default function PortfolioPage() {
                       </tr>
                     )
                   })}
+                  {/* ONs row */}
+                  {(() => {
+                    const filteredOns = FIXED_INCOME.filter(fi => filter === 'all' || fi.account === filter)
+                    if (filteredOns.length === 0) return null
+                    let onPrices: Record<string, number> = { 'TTC9D.BA': 1.0595, 'IRCOD.BA': 1.056, 'PN36OD.BA': 1.09, 'TLCOOD.BA': 1.0 }
+                    try {
+                      const raw = typeof window !== 'undefined' ? localStorage.getItem('on_prices_v1') : null
+                      if (raw) onPrices = { ...onPrices, ...JSON.parse(raw) }
+                    } catch {}
+                    const nominal = filteredOns.reduce((s, fi) => s + fi.nominal, 0)
+                    const mkt     = filteredOns.reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
+                    const weight  = totalValue > 0 ? (mkt / totalValue) * 100 : 0
+                    return (
+                      <tr className="bg-cyan-500/5 border-t border-cyan-500/20">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-cyan-400">ON</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-100">ONs</p>
+                              <p className="text-xs text-slate-500">{filteredOns.length} bonos · VN {formatCurrency(nominal)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-cyan-400 bg-cyan-500/10 border-cyan-500/20">
+                            Renta Fija
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">{formatCurrency(mkt)}</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2 w-24">
+                            <div className="flex-1 h-1.5 bg-slate-700 rounded-full">
+                              <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${Math.min(weight, 100)}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono w-9 text-right">{weight.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td />
+                      </tr>
+                    )
+                  })()}
+
+                  {/* Cash row */}
+                  {(() => {
+                    const cashUSD = CASH_POSITIONS
+                      .filter(c => c.currency === 'USD' && (filter === 'all' || c.account === filter))
+                      .reduce((s, c) => s + c.amount, 0)
+                    if (cashUSD <= 0) return null
+                    const weight = totalValue > 0 ? (cashUSD / totalValue) * 100 : 0
+                    return (
+                      <tr className="bg-slate-500/5 border-t border-slate-600/20">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-slate-600/30 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-slate-400">$</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-100">Efectivo</p>
+                              <p className="text-xs text-slate-500">USD disponible</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-slate-400 bg-slate-500/10 border-slate-500/20">
+                            Efectivo
+                          </span>
+                        </td>
+                        <td colSpan={4} className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">{formatCurrency(cashUSD)}</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2 w-24">
+                            <div className="flex-1 h-1.5 bg-slate-700 rounded-full">
+                              <div className="h-full bg-slate-400 rounded-full" style={{ width: `${Math.min(weight, 100)}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono w-9 text-right">{weight.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td />
+                      </tr>
+                    )
+                  })()}
                 </tbody>
               </table>
             </div>

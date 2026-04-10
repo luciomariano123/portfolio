@@ -15,9 +15,10 @@ const HISTORY_KEY = 'portfolio_history_v1'
 
 // Default ON prices (kept in sync with renta-fija page)
 const DEFAULT_ON_PRICES: Record<string, number> = {
-  'TTC9D.BA': 1.0595,
-  'PN36D.BA':  1.09,
+  'TTC9D.BA':  1.0595,
   'IRCOD.BA':  1.056,
+  'PN36OD.BA': 1.09,
+  'TLCOOD.BA': 1.0,
 }
 
 export function loadHistory(): PortfolioSnapshot[] {

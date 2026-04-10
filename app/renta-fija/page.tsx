@@ -7,18 +7,20 @@ import { formatCurrency } from '@/lib/utils'
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle2, Tag, Pencil, Save } from 'lucide-react'
 
 const ON_COLORS: Record<string, string> = {
-  'TTC9D.BA': 'bg-indigo-500/15 text-indigo-400 border-indigo-500/25',
-  'PN36D.BA':  'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  'TTC9D.BA':  'bg-indigo-500/15 text-indigo-400 border-indigo-500/25',
   'IRCOD.BA':  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  'PN36OD.BA': 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  'TLCOOD.BA': 'bg-pink-500/15 text-pink-400 border-pink-500/25',
 }
 
 const ON_PRICES_KEY = 'on_prices_v1'
 
-// Default prices from user's broker screenshot (23/03/2026)
+// Default prices (nominal = 1.0 = par)
 const DEFAULT_ON_PRICES: Record<string, number> = {
-  'TTC9D.BA': 1.0595,
-  'PN36D.BA':  1.09,
+  'TTC9D.BA':  1.0595,
   'IRCOD.BA':  1.056,
+  'PN36OD.BA': 1.09,
+  'TLCOOD.BA': 1.0,
 }
 
 function OnBadge({ ticker }: { ticker: string }) {
