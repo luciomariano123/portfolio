@@ -21,18 +21,21 @@ const RANGES: Range[] = ['1M', '3M', '6M', 'YTD', '1A', 'TODO']
 
 function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
   const now = new Date()
-  const cutoff = new Date(now)
+  const yr = now.getFullYear()
 
+  // Use string comparison (dates stored as YYYY-MM-DD) to avoid timezone issues
+  let cutoffStr: string
   switch (range) {
-    case '1M': cutoff.setMonth(cutoff.getMonth() - 1); break
-    case '3M': cutoff.setMonth(cutoff.getMonth() - 3); break
-    case '6M': cutoff.setMonth(cutoff.getMonth() - 6); break
-    case 'YTD': cutoff.setMonth(0); cutoff.setDate(1); break
-    case '1A': cutoff.setFullYear(cutoff.getFullYear() - 1); break
     case 'TODO': return data
+    case 'YTD': cutoffStr = `${yr - 1}-12-31`; break  // include Dec 31 as baseline
+    case '1M':  { const d = new Date(now); d.setMonth(d.getMonth() - 1);       cutoffStr = d.toISOString().slice(0, 10); break }
+    case '3M':  { const d = new Date(now); d.setMonth(d.getMonth() - 3);       cutoffStr = d.toISOString().slice(0, 10); break }
+    case '6M':  { const d = new Date(now); d.setMonth(d.getMonth() - 6);       cutoffStr = d.toISOString().slice(0, 10); break }
+    case '1A':  { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); cutoffStr = d.toISOString().slice(0, 10); break }
+    default: return data
   }
 
-  return data.filter(d => new Date(d.date) >= cutoff)
+  return data.filter(d => d.date >= cutoffStr)
 }
 
 interface CustomTooltipProps {
