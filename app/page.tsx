@@ -12,6 +12,7 @@ import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, CheckCircle } from 'lucide-react'
 import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
 import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
+import { PortfolioDistChart, type DistItem } from '@/components/PortfolioDistChart'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -101,18 +102,35 @@ export default function DashboardPage() {
   }, [positions, prices])
 
   const ytdReturn = useMemo(() => {
-    const ytdStart = HISTORICAL_DATA.find(d => d.date >= '2026-01-01')
-    const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!ytdStart || !last) return 0
-    return ((last.quotaPart - ytdStart.quotaPart) / ytdStart.quotaPart) * 100
-  }, [])
+    const dec31 = [...HISTORICAL_DATA].filter(d => d.date <= '2025-12-31').at(-1)
+    if (!dec31 || stats.totalValueUSD <= 0) return 0
+    return ((stats.totalValueUSD - dec31.quotaPart) / dec31.quotaPart) * 100
+  }, [stats.totalValueUSD])
 
   const totalReturn = useMemo(() => {
     const first = HISTORICAL_DATA[0]
-    const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (!first || !last) return 0
-    return ((last.quotaPart - first.quotaPart) / first.quotaPart) * 100
-  }, [])
+    if (!first || stats.totalValueUSD <= 0) return 0
+    return ((stats.totalValueUSD - first.quotaPart) / first.quotaPart) * 100
+  }, [stats.totalValueUSD])
+
+  const distItems = useMemo<DistItem[]>(() => {
+    const items: DistItem[] = positions
+      .filter(p => prices[p.tickerYF])
+      .map(p => {
+        const adrEquiv = p.quantity / p.ratio
+        return {
+          label: p.ticker,
+          sublabel: p.name,
+          value: adrEquiv * (prices[p.tickerYF]?.price ?? 0),
+          sector: p.sector,
+        }
+      })
+    const cashUSD = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
+    if (cashUSD > 0) items.push({ label: 'Cash', sublabel: 'Efectivo USD', value: cashUSD, sector: 'Efectivo' })
+    const fiValue = FIXED_INCOME.reduce((s, f) => s + f.nominal, 0)
+    if (fiValue > 0) items.push({ label: 'ONs', sublabel: 'Renta Fija', value: fiValue, sector: 'Renta Fija' })
+    return items
+  }, [positions, prices])
 
   if (!mounted) return null
 
@@ -190,7 +208,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <EvolutionChart />
+              <EvolutionChart liveValue={loading ? undefined : stats.totalValueUSD} />
             </CardContent>
           </Card>
         </div>
@@ -293,6 +311,19 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Distribución por activo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-44 bg-slate-700/30 rounded-xl animate-pulse" />
+          ) : (
+            <PortfolioDistChart items={distItems} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

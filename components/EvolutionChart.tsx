@@ -20,7 +20,7 @@ type Range = '1M' | '3M' | '6M' | 'YTD' | '1A' | 'TODO'
 const RANGES: Range[] = ['1M', '3M', '6M', 'YTD', '1A', 'TODO']
 
 function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
-  const now = new Date(data[data.length - 1].date)
+  const now = new Date()
   const cutoff = new Date(now)
 
   switch (range) {
@@ -53,10 +53,18 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   )
 }
 
-export function EvolutionChart() {
+export function EvolutionChart({ liveValue }: { liveValue?: number }) {
   const [range, setRange] = useState<Range>('TODO')
 
-  const filteredData = useMemo(() => filterByRange(HISTORICAL_DATA, range), [range])
+  const dataWithLive = useMemo(() => {
+    if (!liveValue || liveValue <= 0) return HISTORICAL_DATA
+    const today = new Date().toISOString().slice(0, 10)
+    const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
+    if (last?.date === today) return HISTORICAL_DATA
+    return [...HISTORICAL_DATA, { date: today, quotaPart: liveValue }]
+  }, [liveValue])
+
+  const filteredData = useMemo(() => filterByRange(dataWithLive, range), [dataWithLive, range])
 
   const firstValue = filteredData[0]?.quotaPart ?? 0
   const lastValue = filteredData[filteredData.length - 1]?.quotaPart ?? 0
