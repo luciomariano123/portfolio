@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
 import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, CheckCircle } from 'lucide-react'
 import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
+import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -83,7 +84,7 @@ export default function DashboardPage() {
     const totalPnlUSD = totalValueUSD - totalCostUSD
     const totalPnlPct = totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0
 
-    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, dailyPnlUSD, dailyPnlPct }
+    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue }
   }, [positions, prices])
 
   const movers = useMemo(() => {
@@ -204,7 +205,22 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Tenencia breakdown */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Composición de cartera</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TenenciaBreakdown
+              cedears={stats.cedearValue}
+              cash={stats.cashUSD}
+              fi={stats.fiValue}
+              loading={loading}
+            />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Mayores Movimientos Hoy</CardTitle>

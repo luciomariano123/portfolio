@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
 import { SECTOR_COLORS, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock,
   TrendingUp, TrendingDown, Minus, AlertCircle,
@@ -538,6 +539,28 @@ export default function PortfolioPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Tenencia breakdown */}
+      {(() => {
+        let onPrices: Record<string, number> = { 'TTC9D.BA': 1.0595, 'IRCOD.BA': 1.056, 'PN36OD.BA': 1.09, 'TLCOOD.BA': 1.0 }
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('on_prices_v1') : null
+          if (raw) onPrices = { ...onPrices, ...JSON.parse(raw) }
+        } catch {}
+        const filteredOns  = FIXED_INCOME.filter(fi => filter === 'all' || fi.account === filter)
+        const fiVal        = filteredOns.reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
+        const cashVal      = CASH_POSITIONS.filter(c => c.currency === 'USD' && (filter === 'all' || c.account === filter)).reduce((s, c) => s + c.amount, 0)
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Composición de cartera</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TenenciaBreakdown cedears={summary.totalValue} cash={cashVal} fi={fiVal} loading={loading} />
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Modal */}
       {showModal && (
