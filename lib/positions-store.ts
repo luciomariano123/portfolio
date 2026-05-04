@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-const POSITIONS_KEY = 'cedear_positions_v4'   // bumped to v4: updated portfolios Apr 2026
+const POSITIONS_KEY = 'cedear_positions_v5'   // bumped to v5: updated portfolios May 2026
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria
@@ -36,19 +36,19 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1, quantity: 3091, ppc: 1.59010029,  account: 'Lucio' },
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 673,  ppc: 34.0499406,  account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.6998192,  account: 'Lucio' },
-  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 510,  ppc: 27.3113529,  account: 'Lucio' },
+  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 881,  ppc: 26.9486040,  account: 'Lucio' },
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 1144, ppc: 14.4238986,  account: 'Lucio' },
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 675,  ppc: 7.29820741,  account: 'Lucio' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 4502, ppc: 3.27319191,  account: 'Lucio' },
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 78,   ppc: 50.9270513,  account: 'Lucio' },
-  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 760,  ppc: 19.3875526,  account: 'Lucio' },
+  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 600,  ppc: 24.5575670,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
   { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 1386, ppc: 4.98556999,  account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.1329114,  account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.4978723,  account: 'Agro' },
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 633,  ppc: 14.7424961,  account: 'Agro' },
   { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.3136646,   account: 'Agro' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 2719, ppc: 3.5310776,   account: 'Agro' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 3070, ppc: 3.5157362,   account: 'Agro' },
   { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 641,  ppc: 8.53198128,  account: 'Agro' },
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 65,   ppc: 51.2923077,  account: 'Agro' },
 ]

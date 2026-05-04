@@ -99,8 +99,8 @@ export function getConsolidatedPositions(): Position[] {
 
 // Cash positions
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 17304, account: 'Lucio' },
-  { currency: 'USD', amount: 6638,  account: 'Agro'  },
+  { currency: 'USD', amount: 7492,  account: 'Lucio' },
+  { currency: 'USD', amount: 6429,  account: 'Agro'  },
 ]
 
 // Fixed Income — Obligaciones Negociables (todas en Agro)
