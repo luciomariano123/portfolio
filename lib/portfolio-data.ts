@@ -231,7 +231,7 @@ export const CEDEAR_RATIOS: Record<string, number> = {
   PAMP:  25,
   PEP:   20,
   PLTR:  1,
-  SPY:   15,
+  SPY:   60,
   TGSU2: 10,
   TSLA:  10,
   VIST:  1,
