@@ -5,6 +5,7 @@
 // Going forward, portfolio/page.tsx auto-saves each day when prices load
 
 import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { loadOnPrices } from '@/lib/on-prices'
 
 export interface PortfolioSnapshot {
   date: string    // YYYY-MM-DD
@@ -12,14 +13,6 @@ export interface PortfolioSnapshot {
 }
 
 const HISTORY_KEY = 'portfolio_history_v1'
-
-// Default ON prices (kept in sync with renta-fija page)
-const DEFAULT_ON_PRICES: Record<string, number> = {
-  'TTC9D.BA':  1.0595,
-  'IRCOD.BA':  1.056,
-  'PN36OD.BA': 1.09,
-  'TLCOOD.BA': 1.0,
-}
 
 export function loadHistory(): PortfolioSnapshot[] {
   // Seed from HISTORICAL_DATA
@@ -52,11 +45,7 @@ export function computeTotalPortfolioValue(cedearValue: number): number {
     .reduce((s, c) => s + c.amount, 0)
 
   // ONs market value (reads saved prices from localStorage)
-  let onPrices = DEFAULT_ON_PRICES
-  try {
-    const raw = localStorage.getItem('on_prices_v1')
-    if (raw) onPrices = { ...DEFAULT_ON_PRICES, ...JSON.parse(raw) }
-  } catch {}
+  const onPrices = loadOnPrices()
 
   const onMktValue = FIXED_INCOME.reduce(
     (s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1),

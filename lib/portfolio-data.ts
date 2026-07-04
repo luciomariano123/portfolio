@@ -1,20 +1,7 @@
 // Portfolio data extracted from Portfolio Vicky.xlsx
 // Balanz Lucio + Balanz Agropecuaria (consolidated)
-
-export interface Position {
-  ticker: string
-  tickerYF: string // Yahoo Finance ticker
-  name: string
-  sector: string
-  // Balanz Lucio
-  quantityLucio: number
-  ppcLucio: number // PPC en USD
-  // Balanz Agro
-  quantityAgro: number
-  ppcAgro: number // PPC en USD
-  // CEDEAR ratio
-  ratio: number
-}
+// NOTE: live CEDEAR positions live in lib/positions-store.ts (client) and
+// lib/whatsapp-positions.ts (server). This file holds cash, ONs and history.
 
 export interface CashPosition {
   currency: 'ARS' | 'USD'
@@ -43,58 +30,6 @@ export interface HistoricalPoint {
   date: string
   quotaPart: number
   variacion?: number
-}
-
-// CEDEAR Positions — Balanz Lucio
-export const BALANZ_LUCIO: Omit<Position, 'quantityAgro' | 'ppcAgro'>[] = [
-  { ticker: 'YPF', tickerYF: 'YPF', name: 'YPF S.A.', sector: 'Energía', quantityLucio: 1264, ppcLucio: 18.5, ratio: 1 },
-  { ticker: 'PAMP', tickerYF: 'PAM', name: 'Pampa Energía', sector: 'Energía', quantityLucio: 5888, ppcLucio: 24.5, ratio: 25 },
-  { ticker: 'MSFT', tickerYF: 'MSFT', name: 'Microsoft', sector: 'Tecnología', quantityLucio: 760, ppcLucio: 370.0, ratio: 1 },
-  { ticker: 'MELI', tickerYF: 'MELI', name: 'MercadoLibre', sector: 'Tecnología', quantityLucio: 553, ppcLucio: 1680.0, ratio: 20 },
-  { ticker: 'META', tickerYF: 'META', name: 'Meta Platforms', sector: 'Tecnología', quantityLucio: 311, ppcLucio: 480.0, ratio: 1 },
-  { ticker: 'SPY', tickerYF: 'SPY', name: 'S&P 500 ETF', sector: 'ETF', quantityLucio: 96, ppcLucio: 490.0, ratio: 1 },
-  { ticker: 'NVDA', tickerYF: 'NVDA', name: 'NVIDIA', sector: 'Tecnología', quantityLucio: 120, ppcLucio: 120.0, ratio: 1 },
-  { ticker: 'GGAL', tickerYF: 'GGAL', name: 'Grupo Galicia', sector: 'Financiero', quantityLucio: 200, ppcLucio: 35.0, ratio: 10 },
-  { ticker: 'BABA', tickerYF: 'BABA', name: 'Alibaba', sector: 'Tecnología', quantityLucio: 150, ppcLucio: 85.0, ratio: 10 },
-]
-
-// CEDEAR Positions — Balanz Agropecuaria
-export const BALANZ_AGRO: Omit<Position, 'quantityLucio' | 'ppcLucio'>[] = [
-  { ticker: 'PAMP', tickerYF: 'PAM', name: 'Pampa Energía', sector: 'Energía', quantityAgro: 2719, ppcAgro: 22.0, ratio: 25 },
-  { ticker: 'YPF', tickerYF: 'YPF', name: 'YPF S.A.', sector: 'Energía', quantityAgro: 236, ppcAgro: 16.0, ratio: 1 },
-  { ticker: 'MSFT', tickerYF: 'MSFT', name: 'Microsoft', sector: 'Tecnología', quantityAgro: 120, ppcAgro: 380.0, ratio: 1 },
-  { ticker: 'PLTR', tickerYF: 'PLTR', name: 'Palantir', sector: 'Tecnología', quantityAgro: 250, ppcAgro: 22.0, ratio: 1 },
-  { ticker: 'MCD', tickerYF: 'MCD', name: "McDonald's", sector: 'Consumo', quantityAgro: 80, ppcAgro: 280.0, ratio: 1 },
-  { ticker: 'KO', tickerYF: 'KO', name: 'Coca-Cola', sector: 'Consumo', quantityAgro: 300, ppcAgro: 60.0, ratio: 1 },
-  { ticker: 'PEP', tickerYF: 'PEP', name: 'PepsiCo', sector: 'Consumo', quantityAgro: 120, ppcAgro: 165.0, ratio: 1 },
-]
-
-// Consolidated positions (merge Lucio + Agro)
-export function getConsolidatedPositions(): Position[] {
-  const allTickers = new Set([
-    ...BALANZ_LUCIO.map(p => p.ticker),
-    ...BALANZ_AGRO.map(p => p.ticker),
-  ])
-
-  const result: Position[] = []
-  for (const ticker of allTickers) {
-    const lucio = BALANZ_LUCIO.find(p => p.ticker === ticker)
-    const agro = BALANZ_AGRO.find(p => p.ticker === ticker)
-    const base = lucio || agro!
-
-    result.push({
-      ticker: base.ticker,
-      tickerYF: base.tickerYF,
-      name: base.name,
-      sector: base.sector,
-      ratio: base.ratio,
-      quantityLucio: lucio?.quantityLucio ?? 0,
-      ppcLucio: lucio?.ppcLucio ?? 0,
-      quantityAgro: agro?.quantityAgro ?? 0,
-      ppcAgro: agro?.ppcAgro ?? 0,
-    })
-  }
-  return result
 }
 
 // Cash positions
@@ -216,32 +151,6 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-05-22', quotaPart: 266546.78 },
   { date: '2026-05-29', quotaPart: 271351.38 },
 ]
-
-// CEDEAR ratios — láminas per 1 ADR
-// Back-calculated from real ppc data and historical purchase prices
-export const CEDEAR_RATIOS: Record<string, number> = {
-  AMZN:  90,
-  BABA:  10,
-  BBAR:  3,
-  BMA:   10,
-  CEPU:  10,
-  EWZ:   2,
-  GGAL:  10,
-  KO:    4,
-  MCD:   20,
-  MELI:  100,
-  META:  20,
-  MSFT:  30,
-  NVDA:  1,
-  PAMP:  25,
-  PEP:   20,
-  PLTR:  1,
-  SPY:   60,
-  TGSU2: 10,
-  TSLA:  10,
-  VIST:  1,
-  YPF:   1,
-}
 
 export const SECTOR_COLORS: Record<string, string> = {
   'Tecnología': '#6366f1',

@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-const POSITIONS_KEY = 'cedear_positions_v6'   // bumped to v6: SPY split ratio 20→60 (x3 láminas)
+export const POSITIONS_KEY = 'cedear_positions_v6'   // bumped to v6: SPY split ratio 20→60 (x3 láminas)
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria

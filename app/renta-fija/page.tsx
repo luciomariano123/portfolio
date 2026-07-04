@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState, useCallback } from 'react'
 import { FIXED_INCOME, COUPON_SCHEDULE } from '@/lib/portfolio-data'
+import { ON_PRICES_KEY, DEFAULT_ON_PRICES, loadOnPrices } from '@/lib/on-prices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle2, Tag, Pencil, Save } from 'lucide-react'
@@ -11,16 +12,6 @@ const ON_COLORS: Record<string, string> = {
   'IRCOD.BA':  'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
   'PN36OD.BA': 'bg-amber-500/15 text-amber-400 border-amber-500/25',
   'TLCOOD.BA': 'bg-pink-500/15 text-pink-400 border-pink-500/25',
-}
-
-const ON_PRICES_KEY = 'on_prices_v1'
-
-// Default prices (nominal = 1.0 = par)
-const DEFAULT_ON_PRICES: Record<string, number> = {
-  'TTC9D.BA':  1.0595,
-  'IRCOD.BA':  1.056,
-  'PN36OD.BA': 1.09,
-  'TLCOOD.BA': 1.0,
 }
 
 function OnBadge({ ticker }: { ticker: string }) {
@@ -42,13 +33,7 @@ export default function RentaFijaPage() {
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const raw = localStorage.getItem(ON_PRICES_KEY)
-      if (raw) {
-        const saved = JSON.parse(raw)
-        setOnPrices({ ...DEFAULT_ON_PRICES, ...saved })
-      }
-    } catch {}
+    setOnPrices(loadOnPrices())
   }, [])
 
   const saveOnPrices = useCallback(() => {

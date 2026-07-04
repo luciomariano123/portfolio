@@ -65,16 +65,29 @@ async function fetchPrices(): Promise<FetchPricesResult> {
     })
   )
 
-  // Fetch CCL: PAMP.BA (ARS) / PAMPD.BA (USD)
+  // Fetch implicit CCL averaging several ARS/USD CEDEAR pairs so a single
+  // odd print (e.g. PAMP on a wild day) doesn't distort the rate
+  const CCL_PAIRS: [string, string][] = [
+    ['PAMP.BA', 'PAMPD.BA'],
+    ['AAPL.BA', 'AAPLD.BA'],
+    ['SPY.BA',  'SPYD.BA'],
+  ]
   let ccl = 0
   try {
-    const [pampArs, pampUsd] = await Promise.all([
-      yf.quote('PAMP.BA'),
-      yf.quote('PAMPD.BA'),
-    ])
-    const arsPrice = pampArs.regularMarketPrice ?? 0
-    const usdPrice = pampUsd.regularMarketPrice ?? 0
-    if (usdPrice > 0) ccl = arsPrice / usdPrice
+    const ratios = (
+      await Promise.allSettled(
+        CCL_PAIRS.map(async ([ars, usd]) => {
+          const [qa, qu] = await Promise.all([yf.quote(ars), yf.quote(usd)])
+          const a = qa.regularMarketPrice ?? 0
+          const u = qu.regularMarketPrice ?? 0
+          return u > 0 && a > 0 ? a / u : 0
+        })
+      )
+    )
+      .filter((r): r is PromiseFulfilledResult<number> => r.status === 'fulfilled' && r.value > 0)
+      .map(r => r.value)
+
+    if (ratios.length > 0) ccl = ratios.reduce((s, r) => s + r, 0) / ratios.length
   } catch {
     // fallback ccl stays 0
   }
@@ -200,8 +213,12 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
   }
 
   if (prevSnapshot) {
-    msg += `📈 *vs último snapshot* (${prevSnapshot.date})\n`
-    msg += `  ${prevAbs >= 0 ? '🟢' : '🔴'} ${fmtSign(prevAbs)} (${fmtPct(prevPct)})\n\n`
+    const snapDays = Math.round((now.getTime() - new Date(prevSnapshot.date + 'T12:00:00').getTime()) / 86400000)
+    const ageLabel = snapDays <= 1 ? 'ayer' : `hace ${snapDays} días`
+    msg += `📈 *vs último snapshot* (${prevSnapshot.date} · ${ageLabel})\n`
+    msg += `  ${prevAbs >= 0 ? '🟢' : '🔴'} ${fmtSign(prevAbs)} (${fmtPct(prevPct)})\n`
+    if (snapDays > 14) msg += `  ⚠️ _snapshot desactualizado_\n`
+    msg += '\n'
   }
 
   msg += `📆 *YTD ${now.getFullYear()}*: ${fmtSign(ytdAbs)} (${fmtPct(ytdPct)})\n\n`
