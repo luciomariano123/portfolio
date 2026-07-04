@@ -210,6 +210,11 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-02-22', quotaPart: 241184.90 },
   { date: '2026-03-08', quotaPart: 237894.85 },
   { date: '2026-03-21', quotaPart: 242531.17 },
+  { date: '2026-05-04', quotaPart: 263162.86 },
+  { date: '2026-05-09', quotaPart: 264983.48 },
+  { date: '2026-05-16', quotaPart: 265817.20 },
+  { date: '2026-05-22', quotaPart: 266546.78 },
+  { date: '2026-05-29', quotaPart: 271351.38 },
 ]
 
 // CEDEAR ratios — láminas per 1 ADR
