@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Camera, Loader2, CheckCircle, AlertCircle, Plus, Minus, Upload } from 'lucide-react'
+import { X, Camera, Loader2, CheckCircle, AlertCircle, Plus, Minus, Upload, Clipboard } from 'lucide-react'
 import { EditablePosition, KNOWN_TICKERS } from '@/lib/positions-store'
 
 interface ParsedTrade {
@@ -59,8 +59,11 @@ function parseTrades(text: string): ParsedTrade[] {
     if (!tipoMatch) continue
     const tipo = tipoMatch[1].toUpperCase() as 'COMPRA' | 'VENTA'
 
-    // Combine with next line in case it wraps
-    const combined = line + ' ' + (lines[i + 1] ?? '')
+    // Combine with next line ONLY if it does NOT contain another COMPRA/VENTA
+    // (avoid slurping the next operation's numbers into this one)
+    const next = lines[i + 1] ?? ''
+    const nextHasOp = /\b(COMPRA|VENTA)\b/i.test(next)
+    const combined = nextHasOp ? line : line + ' ' + next
 
     // Find ticker: uppercase word not in skipWords
     const tickerCandidates = [...combined.matchAll(/\b([A-Z]{2,6}(?:\d{1,2})?D?)\b/g)]
@@ -179,6 +182,28 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
 
   function reset() { setStep('upload'); setPreview(null); setTrades([]); setRawText('') }
 
+  async function pasteFromClipboard() {
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const type = item.types.find(t => t.startsWith('image/'))
+        if (type) {
+          const blob = await item.getType(type)
+          handleFile(new File([blob], 'pasted.png', { type }))
+          return
+        }
+      }
+      setErrorMsg('No hay imagen en el portapapeles.')
+      setStep('error')
+    } catch (e) {
+      setErrorMsg('No se pudo leer el portapapeles: ' + String(e))
+      setStep('error')
+    }
+  }
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+  const pasteKey = isMac ? '⌘V' : 'Ctrl+V'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <div className="w-full max-w-lg rounded-2xl border border-slate-700 overflow-hidden" style={{ background: '#1e293b' }}>
@@ -204,12 +229,19 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium text-slate-200">Subir screenshot del broker</p>
-                  <p className="text-xs text-slate-500 mt-1">Hacé clic, arrastrá, o <kbd className="px-1 py-0.5 bg-slate-700 rounded text-slate-300 font-mono">Ctrl+V</kbd></p>
+                  <p className="text-xs text-slate-500 mt-1">Hacé clic para elegir archivo, o arrastrá acá</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full">
                   <Upload size={12} />Seleccionar imagen
                 </div>
               </div>
+              <button
+                onClick={pasteFromClipboard}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border border-slate-600 hover:border-indigo-500 hover:bg-slate-700/50 text-slate-200 text-sm rounded-lg transition-colors"
+              >
+                <Clipboard size={14} />
+                Pegar desde portapapeles <span className="text-slate-500">({pasteKey})</span>
+              </button>
               <p className="text-xs text-slate-500 mt-3 text-center">OCR gratis en el navegador · podés editar los valores antes de aplicar</p>
             </div>
           )}
