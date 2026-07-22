@@ -46,71 +46,129 @@ function parseArgNum(s: string): number {
   return parseFloat(s.replace(/\./g, ''))  // remove thousand-separating periods
 }
 
+// Words that look like tickers but are actually part of descriptions/headers
+const DESCRIPTION_WORDS = new Set([
+  'COMPRA','VENTA','USD','ARS','MEP','THE','AND','CON','POR','DEL','LAS','LOS',
+  'VOTO','ESC','ESCRIT','ENERGIA','PAMPA','CEDEAR','APPLE','INC','CORP','SA',
+  'LTDA','LTD','LLC','NV','AG','GROUP','HOLDINGS','SYSTEMS','TECH','MOTORS',
+  'PLATFORMS','META','ETF','SPDR','TRUST','INTERNATIONAL','COMMUNICATIONS',
+  'DOLAR','DÓLAR','TIPO','TICKER','CANT','CANTIDAD','PRECIO','BRUTO','ARANCEL',
+  'IVA','DER','MERCADO','NETO','MONEDA','FECHA','LIQUI','BOLETO','OPERACIONES',
+  'CONCERTADAS','COMITENTE','NUMERO','NÚMERO','MARIANO','LUCIO','BALANZ',
+])
+
+// Tokenize a line into words + numbers, preserving order
+type Token = { kind: 'word' | 'num'; text: string; value?: number }
+function tokenize(line: string): Token[] {
+  const tokens: Token[] = []
+  const re = /([A-Za-zÁÉÍÓÚÑáéíóúñ]+\d*|\d[\d.,]*)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(line)) !== null) {
+    const t = m[1]
+    if (/^\d/.test(t)) {
+      const v = parseArgNum(t)
+      if (!isNaN(v)) tokens.push({ kind: 'num', text: t, value: v })
+    } else {
+      tokens.push({ kind: 'word', text: t })
+    }
+  }
+  return tokens
+}
+
 function parseTrades(text: string): ParsedTrade[] {
   const trades: ParsedTrade[] = []
-  const skipWords = new Set(['COMPRA','VENTA','USD','ARS','MEP','THE','AND','CON','POR','DEL','LAS','LOS','VOTO','ESC','ESCRIT','ENERGIA'])
 
-  // Process each line
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  // Each row of the boleto starts with a boleto number (7.903.900 style)
+  // and contains VENTA/COMPRA. Rows may wrap in OCR output — combine with
+  // following lines UNTIL we hit another line that starts a new operation.
+  const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean)
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const tipoMatch = line.match(/\b(COMPRA|VENTA)\b/i)
+  // Group lines into "row chunks": start a new chunk whenever we see COMPRA/VENTA
+  const chunks: string[] = []
+  let current = ''
+  for (const line of rawLines) {
+    if (/\b(COMPRA|VENTA)\b/i.test(line)) {
+      if (current) chunks.push(current)
+      current = line
+    } else if (current) {
+      current += ' ' + line
+    }
+  }
+  if (current) chunks.push(current)
+
+  for (const chunk of chunks) {
+    const tipoMatch = chunk.match(/\b(COMPRA|VENTA)\b/i)
     if (!tipoMatch) continue
     const tipo = tipoMatch[1].toUpperCase() as 'COMPRA' | 'VENTA'
+    const tipoIdx = tipoMatch.index ?? 0
 
-    // Combine with next line ONLY if it does NOT contain another COMPRA/VENTA
-    // (avoid slurping the next operation's numbers into this one)
-    const next = lines[i + 1] ?? ''
-    const nextHasOp = /\b(COMPRA|VENTA)\b/i.test(next)
-    const combined = nextHasOp ? line : line + ' ' + next
+    // Everything AFTER the tipo word — that's where ticker + cantidad + precio live
+    const after = chunk.slice(tipoIdx + tipoMatch[0].length)
+    const tokens = tokenize(after)
 
-    // Find ticker: uppercase word not in skipWords
-    const tickerCandidates = [...combined.matchAll(/\b([A-Z]{2,6}(?:\d{1,2})?D?)\b/g)]
-      .map(m => m[1])
-      .filter(t => !skipWords.has(t) && !['COMPRA','VENTA'].includes(t))
-    const brokerTicker = tickerCandidates[0] ?? ''
+    // Ticker: first word (2-5 uppercase-ish chars, optional trailing D) that
+    // is NOT a description word. E.g. after "VENTA" comes "PAMP", "AAPL", etc.
+    let brokerTicker = ''
+    let tickerTokenIdx = -1
+    for (let j = 0; j < tokens.length; j++) {
+      const tk = tokens[j]
+      if (tk.kind !== 'word') continue
+      const up = tk.text.toUpperCase()
+      if (up.length < 2 || up.length > 6) continue
+      if (DESCRIPTION_WORDS.has(up)) continue
+      if (!/^[A-Z]{2,5}D?\d{0,2}$/.test(up)) continue
+      brokerTicker = up
+      tickerTokenIdx = j
+      break
+    }
     if (!brokerTicker) continue
 
-    // Extract all numeric tokens from the combined lines
-    // Keep original strings to parse Argentine format
-    const numTokens = [...combined.matchAll(/\b(\d[\d.,]*)\b/g)].map(m => m[1])
-    const nums = numTokens.map(parseArgNum).filter(n => !isNaN(n) && n > 0)
+    // Cantidad: the FIRST number after the ticker (before the first "usd" prefix)
+    // Precio: the number that follows the FIRST "usd" occurrence after cantidad
+    const rest = tokens.slice(tickerTokenIdx + 1)
 
-    // Skip boleto numbers (very large, > 500_000)
-    const useful = nums.filter(n => n < 500_000)
+    // Find first "usd" word marker
+    const usdIdx = rest.findIndex(t => t.kind === 'word' && t.text.toUpperCase() === 'USD')
 
-    if (useful.length < 2) continue
-
-    // First useful integer-ish number = cantidad
-    const cantIdx = useful.findIndex(n => Number.isInteger(n) || Math.abs(n - Math.round(n)) < 0.01)
-    if (cantIdx === -1) continue
-    const cantidad = Math.round(useful[cantIdx])
-
-    // Remaining numbers after cantidad
-    const rest = useful.slice(cantIdx + 1)
-
-    // Find precio: try each candidate, verify with bruto (cant × price ≈ some other number)
+    let cantidad = 0
     let precio = 0
-    for (const raw of rest) {
-      // Try raw as-is, /10, /100, /1000
-      for (const divisor of [1, 10, 100, 1000]) {
-        const candidate = raw / divisor
-        if (candidate <= 0 || candidate > 10000) continue
-        // Check if candidate × cantidad ≈ any number in the rest (bruto)
-        const bruto = candidate * cantidad
-        const verified = rest.some(n => Math.abs(n - bruto) / bruto < 0.02)
-        if (verified) { precio = candidate; break }
-      }
-      if (precio > 0) break
-    }
 
-    // Fallback: use first small number in rest as price
-    if (precio === 0 && rest.length > 0) {
-      precio = rest.find(n => n < 10000 && n > 0) ?? 0
+    if (usdIdx !== -1) {
+      // Cantidad = last number before the first USD marker
+      const beforeUsd = rest.slice(0, usdIdx).filter(t => t.kind === 'num')
+      const lastBefore = beforeUsd[beforeUsd.length - 1]
+      if (lastBefore?.value !== undefined) cantidad = Math.round(lastBefore.value)
+
+      // Precio = first number after the first USD marker
+      const afterUsd = rest.slice(usdIdx + 1)
+      const firstNum = afterUsd.find(t => t.kind === 'num')
+      if (firstNum?.value !== undefined) precio = firstNum.value
+    } else {
+      // Fallback: no USD marker found — use first two numbers as cant/precio
+      const nums = rest.filter(t => t.kind === 'num' && (t.value ?? 0) > 0 && (t.value ?? 0) < 500_000)
+      if (nums.length >= 2) {
+        cantidad = Math.round(nums[0].value!)
+        precio = nums[1].value!
+      }
     }
 
     if (cantidad <= 0 || precio <= 0) continue
+
+    // Sanity check: bruto (cant × precio) should appear elsewhere in the chunk
+    // If it doesn't, precio might be off by a factor of 10/100
+    const allNums = tokens.filter(t => t.kind === 'num').map(t => t.value!)
+    const bruto = cantidad * precio
+    const brutoFound = allNums.some(n => Math.abs(n - bruto) / bruto < 0.02)
+    if (!brutoFound) {
+      for (const div of [10, 100, 1000]) {
+        const candidate = precio / div
+        const b = cantidad * candidate
+        if (allNums.some(n => Math.abs(n - b) / b < 0.02)) {
+          precio = candidate
+          break
+        }
+      }
+    }
 
     trades.push({ tipo, brokerTicker, ticker: mapTicker(brokerTicker), cantidad, precio })
   }
