@@ -36,14 +36,21 @@ function mapTicker(raw: string): string {
   return up
 }
 
-/** Parse Argentine-formatted number: periods = thousands sep, comma = decimal */
+/** Parse Argentine-formatted number: periods = thousands sep, comma = decimal.
+ * Also handles US-style "2208.90" (single period with 2 digits after) as decimal,
+ * because OCR sometimes reads Argentine commas as periods. */
 function parseArgNum(s: string): number {
-  // e.g. "14.712,18" → 14712.18 ; "3,545" → 3.545 ; "4560" → 4560
-  const hasPeriodAndComma = s.includes('.') && s.includes(',')
-  const hasOnlyComma = !s.includes('.') && s.includes(',')
-  if (hasPeriodAndComma) return parseFloat(s.replace(/\./g, '').replace(',', '.'))
-  if (hasOnlyComma) return parseFloat(s.replace(',', '.'))
-  return parseFloat(s.replace(/\./g, ''))  // remove thousand-separating periods
+  if (s.includes('.') && s.includes(',')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.'))
+  }
+  if (s.includes(',')) return parseFloat(s.replace(',', '.'))
+  // Only periods (or none)
+  const parts = s.split('.')
+  if (parts.length === 2 && parts[1].length === 2) {
+    // "2208.90" → decimal (thousands separators come in groups of 3)
+    return parseFloat(s)
+  }
+  return parseFloat(s.replace(/\./g, ''))
 }
 
 // Words that look like tickers but are actually part of descriptions/headers
@@ -78,23 +85,13 @@ function tokenize(line: string): Token[] {
 function parseTrades(text: string): ParsedTrade[] {
   const trades: ParsedTrade[] = []
 
-  // Each row of the boleto starts with a boleto number (7.903.900 style)
-  // and contains VENTA/COMPRA. Rows may wrap in OCR output — combine with
-  // following lines UNTIL we hit another line that starts a new operation.
+  // In real Balanz boletos, Tesseract puts the entire data row on a single line
+  // (the header/label words wrap to the previous line, but numeric data stays
+  // together). Parse each line that contains COMPRA/VENTA independently — no
+  // merging with adjacent lines, which caused garbage when a neighbouring row
+  // was mangled by OCR (e.g. VENTA misread as "VER").
   const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean)
-
-  // Group lines into "row chunks": start a new chunk whenever we see COMPRA/VENTA
-  const chunks: string[] = []
-  let current = ''
-  for (const line of rawLines) {
-    if (/\b(COMPRA|VENTA)\b/i.test(line)) {
-      if (current) chunks.push(current)
-      current = line
-    } else if (current) {
-      current += ' ' + line
-    }
-  }
-  if (current) chunks.push(current)
+  const chunks = rawLines.filter(l => /\b(COMPRA|VENTA)\b/i.test(l))
 
   for (const chunk of chunks) {
     const tipoMatch = chunk.match(/\b(COMPRA|VENTA)\b/i)
@@ -176,6 +173,35 @@ function parseTrades(text: string): ParsedTrade[] {
   return trades
 }
 
+/** Upscale (2x), grayscale + threshold — dramatically improves Tesseract
+ * accuracy on the small, low-contrast text of Balanz boleto tables. */
+async function preprocessImage(file: File): Promise<Blob> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = reject
+    el.src = URL.createObjectURL(file)
+  })
+  const scale = img.width < 1400 ? 2 : 1
+  const canvas = document.createElement('canvas')
+  canvas.width = img.width * scale
+  canvas.height = img.height * scale
+  const ctx = canvas.getContext('2d')!
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const d = imageData.data
+  // Grayscale + adaptive-ish threshold at 150
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+    const v = gray < 150 ? 0 : 255
+    d[i] = d[i + 1] = d[i + 2] = v
+  }
+  ctx.putImageData(imageData, 0, 0)
+  return new Promise<Blob>(resolve => canvas.toBlob(b => resolve(b!), 'image/png'))
+}
+
 export function ImportTradesModal({ account, onApply, onClose }: Props) {
   const [step, setStep] = useState<'upload' | 'parsing' | 'review' | 'error'>('upload')
   const [trades, setTrades] = useState<ParsedTrade[]>([])
@@ -198,8 +224,10 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
   async function handleFile(file: File) {
     setPreview(URL.createObjectURL(file))
     setStep('parsing')
-    setProgress('Cargando OCR...')
+    setProgress('Preprocesando imagen...')
     try {
+      const preprocessed = await preprocessImage(file)
+      setProgress('Cargando OCR...')
       const { createWorker } = await import('tesseract.js')
       const worker = await createWorker('spa+eng', 1, {
         logger: (m: { status: string; progress: number }) => {
@@ -208,7 +236,7 @@ export function ImportTradesModal({ account, onApply, onClose }: Props) {
           else if (m.status === 'recognizing text') setProgress(`Reconociendo... ${Math.round((m.progress ?? 0) * 100)}%`)
         },
       })
-      const { data } = await worker.recognize(file)
+      const { data } = await worker.recognize(preprocessed)
       await worker.terminate()
       const text = data.text
       setRawText(text)
