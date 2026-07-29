@@ -85,7 +85,27 @@ export default function DashboardPage() {
     const totalPnlUSD = totalValueUSD - totalCostUSD
     const totalPnlPct = totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0
 
-    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue }
+    // Per-ticker daily contribution (consolidated across accounts)
+    const perTicker = new Map<string, { dailyPnlUSD: number; changePercent: number }>()
+    for (const pos of positions) {
+      const priceData = prices[pos.tickerYF]
+      if (!priceData) continue
+      const adrEquiv = pos.quantity / pos.ratio
+      const contribution = adrEquiv * priceData.change
+      const prev = perTicker.get(pos.ticker)
+      if (prev) {
+        prev.dailyPnlUSD += contribution
+      } else {
+        perTicker.set(pos.ticker, { dailyPnlUSD: contribution, changePercent: priceData.changePercent })
+      }
+    }
+    const dailyBreakdown = [...perTicker.entries()].map(([ticker, v]) => ({
+      ticker,
+      dailyPnlUSD: v.dailyPnlUSD,
+      changePercent: v.changePercent,
+    }))
+
+    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue, dailyBreakdown }
   }, [positions, prices])
 
   const movers = useMemo(() => {
@@ -187,6 +207,7 @@ export default function DashboardPage() {
         dolarCCL={rates.ccl ?? 1430}
         dolarBlue={rates.blue ?? 1450}
         loading={loading}
+        dailyBreakdown={stats.dailyBreakdown}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
