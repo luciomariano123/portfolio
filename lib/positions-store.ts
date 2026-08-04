@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v8'   // v8: sync with Excel 22-jul-2026 late (PAMP -4405 láminas, META +735, TSLA +820, nuevas META/TSLA en Agro)
+export const POSITIONS_KEY = 'cedear_positions_v9'   // v9: Lucio sell-off (AMZN & MSFT out, META 1432→932); cash Lucio 3750→41848
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria
@@ -32,11 +32,9 @@ const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
 const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
-  { ticker: 'AMZN',  tickerYF: 'AMZND.BA',  name: 'Amazon',          sector: 'Tecnología', ratio: 1, quantity: 3091, ppc: 1.59,   account: 'Lucio' },
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
-  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 1432, ppc: 26.79,  account: 'Lucio' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 1144, ppc: 14.38,  account: 'Lucio' },
+  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 932,  ppc: 26.79,  account: 'Lucio' },
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 675,  ppc: 7.28,   account: 'Lucio' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 1425, ppc: 3.34,   account: 'Lucio' },
   { ticker: 'PLTR',  tickerYF: 'PLTRD.BA',  name: 'Palantir',        sector: 'Tecnología', ratio: 1, quantity: 78,   ppc: 50.79,  account: 'Lucio' },
