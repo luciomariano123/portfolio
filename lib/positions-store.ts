@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v10'  // v10: rebalance (PLTR out both, TSLA -200, GOGL Agro -500, MSFT Agro -300); cash +20825
+export const POSITIONS_KEY = 'cedear_positions_v11'  // v11: new BRKB (Berkshire) in Agro 581 @ 24.47
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria
@@ -39,6 +39,7 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 1425, ppc: 3.34,   account: 'Lucio' },
   { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 1024, ppc: 23.57,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
+  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 581, ppc: 24.47, account: 'Agro' },
   { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 886,  ppc: 4.98,   account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.00,  account: 'Agro' },
   { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.40,  account: 'Agro' },
@@ -144,6 +145,7 @@ export const KNOWN_TICKERS: Pick<EditablePosition, 'ticker' | 'tickerYF' | 'name
   { ticker: 'ARKK',  tickerYF: 'ARKKD.BA',  name: 'ARK Innovation',  sector: 'ETF',        ratio: 1 },
   // Financiero
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1 },
+  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1 },
   { ticker: 'GGAL',  tickerYF: 'GGALD.BA',  name: 'Grupo Galicia',   sector: 'Financiero', ratio: 1 },
   { ticker: 'BMA',   tickerYF: 'BMAD.BA',   name: 'Banco Macro',     sector: 'Financiero', ratio: 1 },
   { ticker: 'BBAR',  tickerYF: 'BBARD.BA',  name: 'Banco Francés',   sector: 'Financiero', ratio: 1 },

@@ -34,8 +34,8 @@ export interface HistoricalPoint {
 
 // Cash positions
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 48425, account: 'Lucio' },
-  { currency: 'USD', amount: 21936, account: 'Agro'  },
+  { currency: 'USD', amount: 48294, account: 'Lucio' },
+  { currency: 'USD', amount: 7888,  account: 'Agro'  },
 ]
 
 // Fixed Income — Obligaciones Negociables (todas en Agro)
