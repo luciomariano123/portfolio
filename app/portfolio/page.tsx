@@ -116,7 +116,9 @@ export default function PortfolioPage() {
       const pnlUSD = currentValueUSD - costUSD
       const pnlPct = costUSD > 0 ? (pnlUSD / costUSD) * 100 : 0
       const changePercent = usdData?.changePercent ?? 0
-      const dailyPnlUSD = currentValueUSD * (changePercent / 100)
+      // Use the absolute per-lámina change, not value × pct — the latter applies
+      // today's percentage to today's (already moved) value and overstates the move.
+      const dailyPnlUSD = pos.quantity * (usdData?.change ?? 0)
 
       // CCL implícito = CEDEAR ARS (lámina) / CEDEAR USD (lámina)
       const priceARS = arsData?.price ?? null
