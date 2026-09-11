@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v11'  // v11: new BRKB (Berkshire) in Agro 581 @ 24.47
+export const POSITIONS_KEY = 'cedear_positions_v12'  // v12: sync Lucio — NU 1323 @ 7.43, PAMP 925, exit TSLA
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria
@@ -35,9 +35,8 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
   { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 932,  ppc: 26.79,  account: 'Lucio' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 675,  ppc: 7.28,   account: 'Lucio' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 1425, ppc: 3.34,   account: 'Lucio' },
-  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 1024, ppc: 23.57,  account: 'Lucio' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 1323, ppc: 7.43,   account: 'Lucio' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 925,  ppc: 3.34,   account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
   { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 581, ppc: 24.47, account: 'Agro' },
   { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 886,  ppc: 4.98,   account: 'Agro' },
