@@ -4,15 +4,17 @@
 // Seed data comes from HISTORICAL_DATA (real Excel snapshots)
 // Going forward, portfolio/page.tsx auto-saves each day when prices load
 
-import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { HISTORICAL_DATA, totalPortfolioValue } from '@/lib/portfolio-data'
 import { loadOnPrices } from '@/lib/on-prices'
+import { todayISO } from '@/lib/utils'
 
 export interface PortfolioSnapshot {
   date: string    // YYYY-MM-DD
   value: number   // Total portfolio USD (CEDEARs + cash USD + ONs at market)
 }
 
-const HISTORY_KEY = 'portfolio_history_v1'
+// v2: v1 snapshots were saved with stale cash (USD 56k instead of 106k) and undervalue the portfolio
+const HISTORY_KEY = 'portfolio_history_v2'
 
 export function loadHistory(): PortfolioSnapshot[] {
   // Seed from HISTORICAL_DATA
@@ -37,29 +39,16 @@ export function loadHistory(): PortfolioSnapshot[] {
   }
 }
 
-/** Compute total portfolio value (CEDEARs + cash USD + ONs at market) */
+/** Compute total portfolio value (CEDEARs + cash USD + ONs at the user's saved market prices) */
 export function computeTotalPortfolioValue(cedearValue: number): number {
-  // Cash USD (fixed until user updates positions)
-  const cashUSD = CASH_POSITIONS
-    .filter(c => c.currency === 'USD')
-    .reduce((s, c) => s + c.amount, 0)
-
-  // ONs market value (reads saved prices from localStorage)
-  const onPrices = loadOnPrices()
-
-  const onMktValue = FIXED_INCOME.reduce(
-    (s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1),
-    0
-  )
-
-  return cedearValue + cashUSD + onMktValue
+  return totalPortfolioValue(cedearValue, loadOnPrices())
 }
 
 /** Save today's snapshot. Overwrites if already saved today (updates with latest prices). */
 export function saveTodaySnapshot(totalValue: number): void {
   if (typeof window === 'undefined' || totalValue <= 0) return
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayISO()
 
   try {
     const raw = localStorage.getItem(HISTORY_KEY)

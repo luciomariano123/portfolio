@@ -3,7 +3,8 @@
 import { useMemo } from 'react'
 import { usePrices } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { COUPON_SCHEDULE, HISTORICAL_DATA, CASH_POSITIONS, FIXED_INCOME, SECTOR_COLORS } from '@/lib/portfolio-data'
+import { COUPON_SCHEDULE, SECTOR_COLORS, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
+import { loadOnPrices } from '@/lib/on-prices'
 import { formatCurrency, formatPercent, getPnlColor, getPnlBg } from '@/lib/utils'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -101,8 +102,8 @@ export default function AnalysisPage() {
   }, [posMetrics])
 
   // Cash + ONs
-  const cashUSD = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
-  const onValue = FIXED_INCOME.reduce((s, fi) => s + fi.nominal, 0)
+  const cashUSD = totalCashUSD()
+  const onValue = fixedIncomeValue(loadOnPrices())
   const cedearTotal = posMetrics.reduce((s, p) => s + p.value, 0)
   const grandTotal = cedearTotal + cashUSD + onValue
 
@@ -114,10 +115,8 @@ export default function AnalysisPage() {
 
   // YTD
   const now = new Date()
-  const ytdBase = HISTORICAL_DATA
-    .filter(d => d.date <= `${now.getFullYear() - 1}-12-31`)
-    .at(-1)
-  const ytdPct = ytdBase ? ((grandTotal - ytdBase.quotaPart) / ytdBase.quotaPart) * 100 : 0
+  const ytdBase = yearStartValue(now.getFullYear())
+  const ytdPct = ytdBase ? ((grandTotal - ytdBase) / ytdBase) * 100 : 0
 
   // Risk metrics
   const techPct = sectorData.find(s => s.sector === 'Tecnología')?.pct ?? 0

@@ -21,6 +21,7 @@ interface SummaryCardsProps {
   dolarBlue: number
   loading: boolean
   dailyBreakdown?: DailyBreakdownRow[]
+  pnlSub?: string
 }
 
 export function SummaryCards({
@@ -33,6 +34,7 @@ export function SummaryCards({
   dolarBlue,
   loading,
   dailyBreakdown,
+  pnlSub,
 }: SummaryCardsProps) {
   const [showBreakdown, setShowBreakdown] = useState(false)
   const cards = [
@@ -51,7 +53,7 @@ export function SummaryCards({
       iconColor: totalPnlPct >= 0 ? 'text-emerald-400' : 'text-red-400',
       iconBg: totalPnlPct >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
       value: loading ? null : (totalPnlUSD >= 0 ? '+' : '') + formatCurrency(totalPnlUSD),
-      sub: loading ? null : formatPercent(totalPnlPct) + ' desde compra',
+      sub: loading ? null : pnlSub ?? formatPercent(totalPnlPct) + ' desde compra',
       valueColor: getPnlColor(totalPnlUSD),
       highlight: false,
     },

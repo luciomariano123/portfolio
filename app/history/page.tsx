@@ -4,19 +4,21 @@ import { useMemo, useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from 'recharts'
 import { loadHistory } from '@/lib/history-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, formatPercent, getPnlColor } from '@/lib/utils'
+import { formatCurrency, formatPercent, getPnlColor, todayISO } from '@/lib/utils'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
 function getYearReturn(data: { date: string; value: number }[], year: number) {
   const lastPrevYear = [...data].reverse().find(d => d.date <= `${year - 1}-12-31`)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayISO()
   const lastThisYear = [...data].reverse().find(d => d.date <= today && d.date.startsWith(`${year}`))
   if (!lastPrevYear || !lastThisYear) return null
   return ((lastThisYear.value - lastPrevYear.value) / lastPrevYear.value) * 100
 }
 
 function getFullYearReturn(data: { date: string; value: number }[], year: number) {
+  // First year has no prior Dec 31 — measure from inception (e.g. 2024 from Oct 1)
   const start = [...data].reverse().find(d => d.date <= `${year - 1}-12-31`)
+    ?? data.find(d => d.date.startsWith(String(year)))
   const end   = [...data].reverse().find(d => d.date <= `${year}-12-31`)
   if (!start || !end || start.date === end.date) return null
   return ((end.value - start.value) / start.value) * 100
@@ -82,7 +84,7 @@ export default function HistoryPage() {
 
   const first = history[0]
   const last  = history[history.length - 1]
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayISO()
 
   const totalReturn = useMemo(() => {
     if (!first || !last) return 0
@@ -399,7 +401,7 @@ export default function HistoryPage() {
                         <td className="py-2 px-4 font-mono text-xs">
                           {chg !== null ? (
                             <span className={getPnlColor(chg)}>
-                              {chg >= 0 ? '+' : ''}{formatPercent(chg)}
+                              {formatPercent(chg)}
                             </span>
                           ) : '—'}
                         </td>

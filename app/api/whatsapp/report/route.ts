@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
-import { DEFAULT_POSITIONS as _DP } from '@/lib/whatsapp-positions'
-
-type WaPosition = { ticker: string; tickerYF: string; name: string; quantity: number; ppc: number; account: string }
-const DEFAULT_POSITIONS = _DP as unknown as WaPosition[]
-import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS, COUPON_SCHEDULE } from '@/lib/portfolio-data'
+import { DEFAULT_POSITIONS, HISTORICAL_DATA, COUPON_SCHEDULE, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
@@ -147,21 +143,19 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
   const total = prices.reduce((s, p) => s + p.value, 0)
 
   // Cash USD
-  const cashUSD = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
+  const cashUSD = totalCashUSD()
 
-  // ONs at nominal (server can't read localStorage prices, use nominal as floor)
-  const onValue = FIXED_INCOME.reduce((s, fi) => s + fi.nominal, 0)
+  // ONs at default market prices (server can't read the user's saved ON prices)
+  const onValue = fixedIncomeValue()
 
   const totalComplete = total + cashUSD + onValue
 
   // YTD: last Dec 31 of previous year
   const now = new Date()
-  const ytdBase = HISTORICAL_DATA
-    .filter(d => d.date <= `${now.getFullYear() - 1}-12-31`)
-    .at(-1)
+  const ytdBase = yearStartValue(now.getFullYear())
 
-  const ytdPct = ytdBase ? ((totalComplete - ytdBase.quotaPart) / ytdBase.quotaPart) * 100 : 0
-  const ytdAbs = ytdBase ? totalComplete - ytdBase.quotaPart : 0
+  const ytdPct = ytdBase ? ((totalComplete - ytdBase) / ytdBase) * 100 : 0
+  const ytdAbs = ytdBase ? totalComplete - ytdBase : 0
 
   // vs last snapshot (prev week)
   const prevSnapshot = HISTORICAL_DATA.at(-1)

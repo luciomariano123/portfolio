@@ -34,9 +34,22 @@ export function formatPercent(value: number, showSign = true): string {
   return `${sign}${value.toFixed(2)}%`
 }
 
+/** Parse a YYYY-MM-DD string as a local date. `new Date('2025-03-14')` is UTC
+ *  midnight, which renders as Mar 13 in Argentina (UTC-3). */
+export function parseISODate(dateStr: string): Date {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** Today's date as YYYY-MM-DD in local time (toISOString() rolls over at 21:00 in Argentina). */
+export function todayISO(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return parseISODate(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function getPnlColor(value: number): string {

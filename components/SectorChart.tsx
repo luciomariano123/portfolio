@@ -10,9 +10,11 @@ import { formatCurrency } from '@/lib/utils'
 interface SectorChartProps {
   prices: Record<string, PriceData>
   positions: EditablePosition[]
+  /** Non-CEDEAR buckets (cash, ONs) so weights are over the whole portfolio */
+  extra?: { sector: string; value: number }[]
 }
 
-export function SectorChart({ prices, positions }: SectorChartProps) {
+export function SectorChart({ prices, positions, extra = [] }: SectorChartProps) {
   const sectorData = useMemo(() => {
     const sectorMap: Record<string, number> = {}
 
@@ -25,6 +27,10 @@ export function SectorChart({ prices, positions }: SectorChartProps) {
 
       sectorMap[pos.sector] = (sectorMap[pos.sector] ?? 0) + value
     }
+    if (Object.keys(sectorMap).length === 0) return []
+    for (const e of extra) {
+      if (e.value > 0) sectorMap[e.sector] = (sectorMap[e.sector] ?? 0) + e.value
+    }
 
     const total = Object.values(sectorMap).reduce((a, b) => a + b, 0)
     return Object.entries(sectorMap)
@@ -35,9 +41,7 @@ export function SectorChart({ prices, positions }: SectorChartProps) {
         color: SECTOR_COLORS[sector] ?? '#64748b',
       }))
       .sort((a, b) => b.value - a.value)
-  }, [positions, prices])
-
-  const total = sectorData.reduce((s, d) => s + d.value, 0)
+  }, [positions, prices, extra])
 
   if (sectorData.length === 0) {
     return (
@@ -48,7 +52,7 @@ export function SectorChart({ prices, positions }: SectorChartProps) {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center">
+    <div className="flex flex-col sm:flex-row xl:flex-col 2xl:flex-row gap-4 items-center">
       <div className="flex-shrink-0">
         <PieChart width={192} height={192}>
           <Pie
@@ -73,15 +77,15 @@ export function SectorChart({ prices, positions }: SectorChartProps) {
         </PieChart>
       </div>
 
-      <div className="flex-1 space-y-2 w-full">
+      <div className="flex-1 min-w-0 space-y-2 w-full">
         {sectorData.map((d) => (
           <div key={d.sector} className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
-            <span className="text-sm text-slate-300 flex-1">{d.sector}</span>
-            <span className="text-xs text-slate-400 font-mono w-16 text-right">
+            <span className="text-sm text-slate-300 flex-1 min-w-0 truncate">{d.sector}</span>
+            <span className="text-xs text-slate-400 font-mono w-12 text-right flex-shrink-0">
               {d.pct.toFixed(1)}%
             </span>
-            <div className="w-24 h-1.5 bg-slate-700 rounded-full">
+            <div className="w-14 h-1.5 bg-slate-700 rounded-full flex-shrink-0">
               <div
                 className="h-full rounded-full"
                 style={{ width: `${d.pct}%`, background: d.color }}

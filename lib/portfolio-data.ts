@@ -1,7 +1,42 @@
 // Portfolio data extracted from Portfolio Vicky.xlsx
 // Balanz Lucio + Balanz Agropecuaria (consolidated)
-// NOTE: live CEDEAR positions live in lib/positions-store.ts (client) and
-// lib/whatsapp-positions.ts (server). This file holds cash, ONs and history.
+// Single source of truth for positions, cash, ONs and history — shared by the
+// client pages (via lib/positions-store.ts) and the WhatsApp API routes.
+// Only nominals / PPC / cash / history come from the Excel; market prices are live.
+
+import { DEFAULT_ON_PRICES } from '@/lib/on-prices'
+
+export interface EditablePosition {
+  ticker: string       // CEDEAR ticker (e.g. "PAMP")
+  tickerYF: string     // Yahoo Finance ticker — BYMA USD market (e.g. "PAMPD.BA")
+  name: string
+  sector: string
+  ratio: number        // kept=1 for all; BYMA D-class tickers are already USD per lámina
+  quantity: number     // Total CEDEAR láminas held
+  ppc: number          // Purchase price in USD per CEDEAR lámina
+  account: 'Lucio' | 'Agro' | 'Consolidado'
+  targetPct?: number   // Target allocation % for rebalancing
+}
+
+// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 26/09/2026)
+// tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
+// ratio=1 for all: currentValue = quantity × priceBYMA_USD
+export const DEFAULT_POSITIONS: EditablePosition[] = [
+  // ── Balanz Lucio ──────────────────────────────────────────────────────────
+  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
+  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 1323, ppc: 7.43,   account: 'Lucio' },
+  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 925,  ppc: 3.34,   account: 'Lucio' },
+  // ── Balanz Agropecuaria ───────────────────────────────────────────────────
+  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.37, account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.98,   account: 'Agro' },
+  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.00,  account: 'Agro' },
+  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.61,  account: 'Agro' },
+  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.68,  account: 'Agro' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.17,   account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.31,   account: 'Agro' },
+  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.99,   account: 'Agro' },
+]
 
 export interface CashPosition {
   currency: 'ARS' | 'USD'
@@ -32,10 +67,10 @@ export interface HistoricalPoint {
   variacion?: number
 }
 
-// Cash positions
+// Cash positions (Excel CONSOLIDADO "Liquidez", 26/09/2026)
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 48294, account: 'Lucio' },
-  { currency: 'USD', amount: 7888,  account: 'Agro'  },
+  { currency: 'USD', amount: 98889, account: 'Lucio' },
+  { currency: 'USD', amount: 7688,  account: 'Agro'  },
 ]
 
 // Fixed Income — Obligaciones Negociables (todas en Agro)
@@ -88,10 +123,15 @@ export const COUPON_SCHEDULE: CouponPayment[] = [
   { date: '2028-05-28', amount: 346.50,  onName: 'ON TECO 23',  onTicker: 'TLCOOD.BA', paid: false },
 ]
 
-// Historical evolution data from "Evolucion TOTAL" sheet (real weekly snapshots)
-// Values = total portfolio in USD (CEDEARs + cash + ONs at market)
-// Start: Nov 9, 2024 (first consolidated snapshot) — End: Mar 21, 2026
+// Historical evolution from the "Evolucion GRAFICO" sheet (weekly snapshots)
+// Values = total portfolio in USD (CEDEARs + cash USD + ONs)
+// Start: Oct 1, 2024 (initial capital 200,500) — End: Sep 18, 2026
 export const HISTORICAL_DATA: HistoricalPoint[] = [
+  { date: '2024-10-01', quotaPart: 200500.00 },
+  { date: '2024-10-13', quotaPart: 201958.13 },
+  { date: '2024-10-21', quotaPart: 202148.12 },
+  { date: '2024-10-27', quotaPart: 203267.10 },
+  { date: '2024-11-01', quotaPart: 202454.18 },
   { date: '2024-11-09', quotaPart: 204161.13 },
   { date: '2024-11-30', quotaPart: 212499.37 },
   { date: '2024-12-07', quotaPart: 212358.84 },
@@ -102,6 +142,7 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2025-01-31', quotaPart: 218866.27 },
   { date: '2025-02-08', quotaPart: 214621.68 },
   { date: '2025-02-22', quotaPart: 214853.16 },
+  { date: '2025-03-12', quotaPart: 201370.70 },
   { date: '2025-03-14', quotaPart: 208654.12 },
   { date: '2025-03-22', quotaPart: 209189.85 },
   { date: '2025-04-01', quotaPart: 202985.71 },
@@ -145,11 +186,29 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-02-22', quotaPart: 241184.90 },
   { date: '2026-03-08', quotaPart: 237894.85 },
   { date: '2026-03-21', quotaPart: 242531.17 },
+  { date: '2026-03-29', quotaPart: 245216.45 },
+  { date: '2026-03-31', quotaPart: 250320.99 },
+  { date: '2026-04-09', quotaPart: 259612.90 },
+  { date: '2026-04-17', quotaPart: 262501.18 },
+  { date: '2026-04-26', quotaPart: 262409.87 },
   { date: '2026-05-04', quotaPart: 263162.86 },
-  { date: '2026-05-09', quotaPart: 264983.48 },
+  { date: '2026-05-09', quotaPart: 264983.47 },
   { date: '2026-05-16', quotaPart: 265817.20 },
-  { date: '2026-05-22', quotaPart: 266546.78 },
-  { date: '2026-05-29', quotaPart: 271351.38 },
+  { date: '2026-05-22', quotaPart: 271351.38 },
+  { date: '2026-06-13', quotaPart: 260389.36 },
+  { date: '2026-06-19', quotaPart: 260750.23 },
+  { date: '2026-06-27', quotaPart: 252875.31 },
+  { date: '2026-07-11', quotaPart: 263632.90 },
+  { date: '2026-07-19', quotaPart: 263052.47 },
+  { date: '2026-07-25', quotaPart: 258192.47 },
+  { date: '2026-07-31', quotaPart: 261693.18 },
+  { date: '2026-08-07', quotaPart: 270198.42 },
+  { date: '2026-08-14', quotaPart: 271501.16 },
+  { date: '2026-08-22', quotaPart: 270522.55 },
+  { date: '2026-08-29', quotaPart: 272464.41 },
+  { date: '2026-09-05', quotaPart: 274984.76 },
+  { date: '2026-09-12', quotaPart: 275979.96 },
+  { date: '2026-09-18', quotaPart: 275369.75 },
 ]
 
 export const SECTOR_COLORS: Record<string, string> = {
@@ -160,4 +219,65 @@ export const SECTOR_COLORS: Record<string, string> = {
   'ETF': '#8b5cf6',
   'Renta Fija': '#06b6d4',
   'Efectivo': '#64748b',
+}
+
+// ── Portfolio-level metrics (shared by dashboard, cartera, análisis, WhatsApp) ──
+
+// Initial capital — "Arranque con" in the Excel. Total P&L is measured against this.
+export const PORTFOLIO_START = { date: '2024-10-01', value: 200500 }
+
+// Annual return targets ("Objetivo" in the Excel). Target values compound on the
+// previous year's target: 200,500 × 1.025 × 1.15 × 1.15 = 271,790 for 2026.
+export const ANNUAL_TARGET_RATES: Record<number, number> = {
+  2024: 0.025,
+  2025: 0.15,
+  2026: 0.15,
+}
+const DEFAULT_TARGET_RATE = 0.15
+
+type AccountFilter = 'Lucio' | 'Agro' | 'all'
+
+export function cashUSD(account: AccountFilter = 'all'): number {
+  return CASH_POSITIONS
+    .filter(c => c.currency === 'USD' && (account === 'all' || c.account === account))
+    .reduce((s, c) => s + c.amount, 0)
+}
+
+/** ONs at market: nominal × price (fraction of face value). Server-side falls back to defaults. */
+export function fixedIncomeValue(
+  onPrices: Record<string, number> = DEFAULT_ON_PRICES,
+  account: AccountFilter = 'all',
+): number {
+  return FIXED_INCOME
+    .filter(fi => account === 'all' || fi.account === account)
+    .reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
+}
+
+/** Whole portfolio in USD: CEDEARs at live prices + cash USD + ONs at market. */
+export function totalPortfolioValue(cedearValue: number, onPrices?: Record<string, number>): number {
+  return cedearValue + cashUSD() + fixedIncomeValue(onPrices)
+}
+
+/** Last snapshot on or before Dec 31 of the previous year — the YTD baseline. */
+export function yearStartValue(year = new Date().getFullYear()): number | undefined {
+  return HISTORICAL_DATA.filter(d => d.date <= `${year - 1}-12-31`).at(-1)?.quotaPart
+}
+
+export interface AnnualTarget {
+  year: number
+  rate: number
+  base: number      // value at the start of the year
+  target: number    // value the portfolio should reach by Dec 31
+  progress: number  // share of the year's target gain achieved (1 = 100%)
+}
+
+export function annualTarget(currentValue: number, year = new Date().getFullYear()): AnnualTarget | undefined {
+  const base = yearStartValue(year)
+  if (base === undefined) return undefined
+  const startYear = Number(PORTFOLIO_START.date.slice(0, 4))
+  let target = PORTFOLIO_START.value
+  for (let y = startYear; y <= year; y++) target *= 1 + (ANNUAL_TARGET_RATES[y] ?? DEFAULT_TARGET_RATE)
+  const rate = ANNUAL_TARGET_RATES[year] ?? DEFAULT_TARGET_RATE
+  const progress = target > base ? (currentValue - base) / (target - base) : 0
+  return { year, rate, base, target, progress }
 }

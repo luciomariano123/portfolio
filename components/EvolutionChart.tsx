@@ -12,12 +12,18 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { HISTORICAL_DATA } from '@/lib/portfolio-data'
-import { formatCurrency, formatDate, formatPercent } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { cn, formatDate, formatPercent, parseISODate, todayISO } from '@/lib/utils'
 
 type Range = '1M' | '3M' | '6M' | 'YTD' | '1A' | 'TODO'
 
 const RANGES: Range[] = ['1M', '3M', '6M', 'YTD', '1A', 'TODO']
+
+function monthsAgo(n: number): string {
+  const d = new Date()
+  d.setMonth(d.getMonth() - n)
+  const pad = (x: number) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
 function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
   const now = new Date()
@@ -28,29 +34,36 @@ function filterByRange(data: typeof HISTORICAL_DATA, range: Range) {
   switch (range) {
     case 'TODO': return data
     case 'YTD': cutoffStr = `${yr - 1}-12-31`; break  // include Dec 31 as baseline
-    case '1M':  { const d = new Date(now); d.setMonth(d.getMonth() - 1);       cutoffStr = d.toISOString().slice(0, 10); break }
-    case '3M':  { const d = new Date(now); d.setMonth(d.getMonth() - 3);       cutoffStr = d.toISOString().slice(0, 10); break }
-    case '6M':  { const d = new Date(now); d.setMonth(d.getMonth() - 6);       cutoffStr = d.toISOString().slice(0, 10); break }
-    case '1A':  { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); cutoffStr = d.toISOString().slice(0, 10); break }
+    case '1M':  cutoffStr = monthsAgo(1);  break
+    case '3M':  cutoffStr = monthsAgo(3);  break
+    case '6M':  cutoffStr = monthsAgo(6);  break
+    case '1A':  cutoffStr = monthsAgo(12); break
     default: return data
   }
 
   return data.filter(d => d.date >= cutoffStr)
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
 interface CustomTooltipProps {
   active?: boolean
   payload?: Array<{ value: number; payload: { date: string; quotaPart: number } }>
+  baseValue: number
 }
 
-function CustomTooltip({ active, payload }: CustomTooltipProps) {
+function CustomTooltip({ active, payload, baseValue }: CustomTooltipProps) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
+  const vsBase = baseValue > 0 ? ((d.quotaPart - baseValue) / baseValue) * 100 : 0
   return (
     <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl">
       <p className="text-slate-400 text-xs mb-1">{formatDate(d.date)}</p>
       <p className="text-slate-100 font-bold text-sm">
-        {d.quotaPart.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+        USD {d.quotaPart.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+      </p>
+      <p className={`text-xs font-mono mt-0.5 ${vsBase >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        {formatPercent(vsBase)} vs inicio del período
       </p>
     </div>
   )
@@ -61,7 +74,7 @@ export function EvolutionChart({ liveValue }: { liveValue?: number }) {
 
   const dataWithLive = useMemo(() => {
     if (!liveValue || liveValue <= 0) return HISTORICAL_DATA
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayISO()
     const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
     if (last?.date === today) return HISTORICAL_DATA
     return [...HISTORICAL_DATA, { date: today, quotaPart: liveValue }]
@@ -77,6 +90,7 @@ export function EvolutionChart({ liveValue }: { liveValue?: number }) {
   const minVal = Math.min(...filteredData.map(d => d.quotaPart))
   const maxVal = Math.max(...filteredData.map(d => d.quotaPart))
   const padding = (maxVal - minVal) * 0.1
+  const longRange = range === 'TODO' || range === '1A'
 
   return (
     <div className="space-y-4">
@@ -118,10 +132,13 @@ export function EvolutionChart({ liveValue }: { liveValue?: number }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} />
           <XAxis
             dataKey="date"
-            tickFormatter={(v) => {
-              const d = new Date(v)
-              return `${d.getDate()}/${d.getMonth() + 1}`
+            tickFormatter={(v: string) => {
+              const d = parseISODate(v)
+              return longRange
+                ? `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
+                : `${d.getDate()}/${d.getMonth() + 1}`
             }}
+            minTickGap={24}
             tick={{ fill: '#94a3b8', fontSize: 11 }}
             axisLine={{ stroke: '#334155' }}
             tickLine={false}
@@ -135,7 +152,7 @@ export function EvolutionChart({ liveValue }: { liveValue?: number }) {
             tickLine={false}
             width={40}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip baseValue={firstValue} />} />
           <ReferenceLine y={firstValue} stroke="#475569" strokeDasharray="4 4" strokeOpacity={0.6} />
           <Line
             type="monotone"

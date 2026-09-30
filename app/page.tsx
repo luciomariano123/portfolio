@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { CASH_POSITIONS, FIXED_INCOME, HISTORICAL_DATA } from '@/lib/portfolio-data'
+import { CASH_POSITIONS, FIXED_INCOME, PORTFOLIO_START, annualTarget, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
+import { loadOnPrices } from '@/lib/on-prices'
 import { SummaryCards } from '@/components/SummaryCards'
 import { EvolutionChart } from '@/components/EvolutionChart'
 import { SectorChart } from '@/components/SectorChart'
@@ -13,6 +14,7 @@ import { TrendingUp, TrendingDown, RefreshCw, Clock, Banknote, Send, Loader2, Ch
 import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
 import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 import { PortfolioDistChart, type DistItem } from '@/components/PortfolioDistChart'
+import { TargetProgress } from '@/components/TargetProgress'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -20,6 +22,9 @@ export default function DashboardPage() {
 
   const { prices, loading, lastUpdated, refresh } = usePrices(allTickers, 60000)
   const { rates } = useDolar()
+
+  // ONs at the market prices saved in Renta Fija (defaults if never edited)
+  const [onPrices] = useState(loadOnPrices)
 
   const [sending, setSending]   = useState(false)
   const [sendState, setSendState] = useState<'idle' | 'ok' | 'error'>('idle')
@@ -74,16 +79,18 @@ export default function DashboardPage() {
       totalCostUSD += pos.quantity * pos.ppc  // ppc is per lámina
     }
 
-    const cashUSD = CASH_POSITIONS
-      .filter(c => c.currency === 'USD')
-      .reduce((s, c) => s + c.amount, 0)
-    const fiValue = FIXED_INCOME.reduce((s, f) => s + f.nominal, 0)
+    const cashUSD = totalCashUSD()
+    const fiValue = fixedIncomeValue(onPrices)
 
     const totalWithCash = totalValueUSD + cashUSD + fiValue
     const dailyPnlUSD = totalValueUSD - prevDayValueUSD
-    const dailyPnlPct = prevDayValueUSD > 0 ? (dailyPnlUSD / prevDayValueUSD) * 100 : 0
-    const totalPnlUSD = totalValueUSD - totalCostUSD
-    const totalPnlPct = totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0
+    // Daily move as % of the whole portfolio (cash and ONs don't move intraday)
+    const prevTotal = totalWithCash - dailyPnlUSD
+    const dailyPnlPct = prevTotal > 0 ? (dailyPnlUSD / prevTotal) * 100 : 0
+    // Total P&L since inception (realized + unrealized), as in the Excel "Ganancia total"
+    const totalPnlUSD = totalWithCash - PORTFOLIO_START.value
+    const totalPnlPct = (totalPnlUSD / PORTFOLIO_START.value) * 100
+    const unrealizedUSD = totalValueUSD - totalCostUSD
 
     // Per-ticker daily contribution (consolidated across accounts)
     const perTicker = new Map<string, { dailyPnlUSD: number; changePercent: number }>()
@@ -105,8 +112,8 @@ export default function DashboardPage() {
       changePercent: v.changePercent,
     }))
 
-    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue, dailyBreakdown }
-  }, [positions, prices])
+    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, unrealizedUSD, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue, dailyBreakdown }
+  }, [positions, prices, onPrices])
 
   const movers = useMemo(() => {
     return positions
@@ -122,16 +129,19 @@ export default function DashboardPage() {
   }, [positions, prices])
 
   const ytdReturn = useMemo(() => {
-    const dec31 = [...HISTORICAL_DATA].filter(d => d.date <= '2025-12-31').at(-1)
-    if (!dec31 || stats.totalValueUSD <= 0) return 0
-    return ((stats.totalValueUSD - dec31.quotaPart) / dec31.quotaPart) * 100
+    const base = yearStartValue()
+    if (!base || stats.totalValueUSD <= 0) return 0
+    return ((stats.totalValueUSD - base) / base) * 100
   }, [stats.totalValueUSD])
 
-  const totalReturn = useMemo(() => {
-    const first = HISTORICAL_DATA[0]
-    if (!first || stats.totalValueUSD <= 0) return 0
-    return ((stats.totalValueUSD - first.quotaPart) / first.quotaPart) * 100
-  }, [stats.totalValueUSD])
+  const totalReturn = stats.totalPnlPct
+
+  const target = useMemo(() => annualTarget(stats.totalValueUSD), [stats.totalValueUSD])
+
+  const sectorExtra = useMemo(() => [
+    { sector: 'Renta Fija', value: stats.fiValue },
+    { sector: 'Efectivo', value: stats.cashUSD },
+  ], [stats.fiValue, stats.cashUSD])
 
   const distItems = useMemo<DistItem[]>(() => {
     const items: DistItem[] = positions
@@ -145,12 +155,10 @@ export default function DashboardPage() {
           sector: p.sector,
         }
       })
-    const cashUSD = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
-    if (cashUSD > 0) items.push({ label: 'Cash', sublabel: 'Efectivo USD', value: cashUSD, sector: 'Efectivo' })
-    const fiValue = FIXED_INCOME.reduce((s, f) => s + f.nominal, 0)
-    if (fiValue > 0) items.push({ label: 'ONs', sublabel: 'Renta Fija', value: fiValue, sector: 'Renta Fija' })
+    if (stats.cashUSD > 0) items.push({ label: 'Cash', sublabel: 'Efectivo USD', value: stats.cashUSD, sector: 'Efectivo' })
+    if (stats.fiValue > 0) items.push({ label: 'ONs', sublabel: 'Renta Fija', value: stats.fiValue, sector: 'Renta Fija' })
     return items
-  }, [positions, prices])
+  }, [positions, prices, stats.cashUSD, stats.fiValue])
 
   if (!mounted) return null
 
@@ -208,6 +216,7 @@ export default function DashboardPage() {
         dolarBlue={rates.blue ?? 1450}
         loading={loading}
         dailyBreakdown={stats.dailyBreakdown}
+        pnlSub={`${formatPercent(stats.totalPnlPct)} desde inicio · CEDEARs ${stats.unrealizedUSD >= 0 ? '+' : '-'}${formatCurrency(Math.abs(stats.unrealizedUSD))} no realizado`}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -234,14 +243,25 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Distribución por Sector</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SectorChart prices={prices} positions={positions} />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Objetivo {target?.year ?? new Date().getFullYear()}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TargetProgress target={target} currentValue={stats.totalValueUSD} loading={loading} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Distribución por Sector</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SectorChart prices={prices} positions={positions} extra={sectorExtra} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -318,15 +338,21 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Obligaciones Negociables</p>
-                {FIXED_INCOME.map((fi, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/40">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">{fi.name}</p>
-                      <p className="text-xs text-slate-500">{fi.rate}% — Vto. {fi.maturity.slice(0, 7)} — {fi.account}</p>
+                {FIXED_INCOME.map((fi, i) => {
+                  const px = onPrices[fi.onTicker] ?? 1
+                  return (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/40">
+                      <div>
+                        <p className="text-sm font-medium text-slate-300">{fi.name}</p>
+                        <p className="text-xs text-slate-500">{fi.rate}% — Vto. {fi.maturity.slice(0, 7)} — {fi.account}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono text-slate-100">{formatCurrency(fi.nominal * px)}</p>
+                        <p className="text-xs font-mono text-slate-500">VN {formatCurrency(fi.nominal)} · {(px * 100).toFixed(1)}%</p>
+                      </div>
                     </div>
-                    <span className="text-sm font-mono text-slate-100">{formatCurrency(fi.nominal)}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </CardContent>

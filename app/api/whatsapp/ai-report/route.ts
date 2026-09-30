@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
-import { DEFAULT_POSITIONS as _DP } from '@/lib/whatsapp-positions'
-import { HISTORICAL_DATA, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { DEFAULT_POSITIONS, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue, type EditablePosition } from '@/lib/portfolio-data'
 
-type WPos = { ticker: string; tickerYF: string; name: string; quantity: number; ppc: number; account: string }
-const DEFAULT_POSITIONS = _DP as unknown as WPos[]
+type WPos = EditablePosition
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
@@ -87,16 +85,16 @@ function generateSummary(priceData: PriceRow[], news: NewsItem[]): string {
   const now         = new Date()
   const dateStr     = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires' })
   const totalCEDEAR = priceData.reduce((s, p) => s + p.value, 0)
-  const cashUSD     = CASH_POSITIONS.filter(c => c.currency === 'USD').reduce((s, c) => s + c.amount, 0)
-  const onValue     = FIXED_INCOME.reduce((s, fi) => s + fi.nominal, 0)
+  const cashUSD     = totalCashUSD()
+  const onValue     = fixedIncomeValue()
   const total       = totalCEDEAR + cashUSD + onValue
 
   const dailyPnl    = priceData.reduce((s, p) => s + p.change * (p.price > 0 ? p.value / p.price : 0), 0)
   const dailyPnlPct = totalCEDEAR > 0 ? (dailyPnl / (totalCEDEAR - dailyPnl)) * 100 : 0
 
-  const ytdBase   = HISTORICAL_DATA.filter(d => d.date <= `${now.getFullYear() - 1}-12-31`).at(-1)
-  const ytdPct    = ytdBase ? ((total - ytdBase.quotaPart) / ytdBase.quotaPart) * 100 : 0
-  const ytdAbs    = ytdBase ? total - ytdBase.quotaPart : 0
+  const ytdBase   = yearStartValue(now.getFullYear())
+  const ytdPct    = ytdBase ? ((total - ytdBase) / ytdBase) * 100 : 0
+  const ytdAbs    = ytdBase ? total - ytdBase : 0
 
   const sorted    = [...priceData].sort((a, b) => b.changePct - a.changePct)
   const gainers   = sorted.filter(p => p.changePct > 0)

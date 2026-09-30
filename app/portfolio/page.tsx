@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
-import { SECTOR_COLORS, FIXED_INCOME, CASH_POSITIONS } from '@/lib/portfolio-data'
+import { SECTOR_COLORS, FIXED_INCOME, cashUSD as accountCashUSD, fixedIncomeValue } from '@/lib/portfolio-data'
+import { loadOnPrices } from '@/lib/on-prices'
 import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 import {
   Plus, Pencil, Trash2, RefreshCw, Clock, FileImage,
@@ -161,20 +162,25 @@ export default function PortfolioPage() {
 
   const totalValue = rows.reduce((s, r) => s + r.currentValueUSD, 0)
 
-  // Feature 4: Total real portfolio value (CEDEARs + cash + ONs)
-  const totalPortfolio = useMemo(() => {
-    if (typeof window === 'undefined') return summary.totalValue
-    return computeTotalPortfolioValue(summary.totalValue)
-  }, [summary.totalValue])
+  // Cash + ONs for the selected account (Consolidado = both)
+  const acct = filter === 'Lucio' || filter === 'Agro' ? filter : 'all'
+  const onPrices = useMemo(() => loadOnPrices(), [])
+  const accountCash = accountCashUSD(acct)
+  const accountOns  = fixedIncomeValue(onPrices, acct)
 
-  // Auto-save daily snapshot once prices are loaded
+  // Total real portfolio value for the selected account (CEDEARs + cash + ONs)
+  const totalPortfolio = summary.totalValue + accountCash + accountOns
+
+  // Weights are over the whole (filtered) portfolio, like "% CARTERA" in the Excel
+  const weightBase = totalValue + accountCash + accountOns
+
+  // Auto-save daily snapshot once prices are loaded — consolidated view only
   const snapshotSavedRef = useRef(false)
   useEffect(() => {
-    if (loading || summary.totalValue <= 0 || snapshotSavedRef.current) return
+    if (loading || filter !== 'all' || summary.totalValue <= 0 || snapshotSavedRef.current) return
     snapshotSavedRef.current = true
-    const total = computeTotalPortfolioValue(summary.totalValue)
-    saveTodaySnapshot(total)
-  }, [loading, summary.totalValue])
+    saveTodaySnapshot(computeTotalPortfolioValue(summary.totalValue))
+  }, [loading, filter, summary.totalValue])
 
   // Feature 5: Treemap data
   const treemapData = useMemo(() => {
@@ -294,7 +300,7 @@ export default function PortfolioPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-700/30">
                   {rows.map(row => {
-                    const weight = totalValue > 0 ? (row.currentValueUSD / totalValue) * 100 : 0
+                    const weight = weightBase > 0 ? (row.currentValueUSD / weightBase) * 100 : 0
                     return (
                       <tr key={`${row.ticker}_${row.account}`} className="hover:bg-slate-700/20 transition-colors group">
                         <td className="py-3 px-3">
@@ -372,14 +378,9 @@ export default function PortfolioPage() {
                   {(() => {
                     const filteredOns = FIXED_INCOME.filter(fi => filter === 'all' || fi.account === filter)
                     if (filteredOns.length === 0) return null
-                    let onPrices: Record<string, number> = { 'TTC9D.BA': 1.0595, 'IRCOD.BA': 1.056, 'PN36OD.BA': 1.09, 'TLCOOD.BA': 1.0 }
-                    try {
-                      const raw = typeof window !== 'undefined' ? localStorage.getItem('on_prices_v1') : null
-                      if (raw) onPrices = { ...onPrices, ...JSON.parse(raw) }
-                    } catch {}
                     const nominal = filteredOns.reduce((s, fi) => s + fi.nominal, 0)
-                    const mkt     = filteredOns.reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
-                    const weight  = totalValue > 0 ? (mkt / totalValue) * 100 : 0
+                    const mkt     = accountOns
+                    const weight  = weightBase > 0 ? (mkt / weightBase) * 100 : 0
                     return (
                       <tr className="bg-cyan-500/5 border-t border-cyan-500/20">
                         <td className="py-3 px-3">
@@ -420,11 +421,9 @@ export default function PortfolioPage() {
 
                   {/* Cash row */}
                   {(() => {
-                    const cashUSD = CASH_POSITIONS
-                      .filter(c => c.currency === 'USD' && (filter === 'all' || c.account === filter))
-                      .reduce((s, c) => s + c.amount, 0)
+                    const cashUSD = accountCash
                     if (cashUSD <= 0) return null
-                    const weight = totalValue > 0 ? (cashUSD / totalValue) * 100 : 0
+                    const weight = weightBase > 0 ? (cashUSD / weightBase) * 100 : 0
                     return (
                       <tr className="bg-slate-500/5 border-t border-slate-600/20">
                         <td className="py-3 px-3">
@@ -555,14 +554,8 @@ export default function PortfolioPage() {
 
       {/* Tenencia breakdown */}
       {(() => {
-        let onPrices: Record<string, number> = { 'TTC9D.BA': 1.0595, 'IRCOD.BA': 1.056, 'PN36OD.BA': 1.09, 'TLCOOD.BA': 1.0 }
-        try {
-          const raw = typeof window !== 'undefined' ? localStorage.getItem('on_prices_v1') : null
-          if (raw) onPrices = { ...onPrices, ...JSON.parse(raw) }
-        } catch {}
-        const filteredOns  = FIXED_INCOME.filter(fi => filter === 'all' || fi.account === filter)
-        const fiVal        = filteredOns.reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
-        const cashVal      = CASH_POSITIONS.filter(c => c.currency === 'USD' && (filter === 'all' || c.account === filter)).reduce((s, c) => s + c.amount, 0)
+        const fiVal   = accountOns
+        const cashVal = accountCash
         return (
           <Card>
             <CardHeader className="pb-2">

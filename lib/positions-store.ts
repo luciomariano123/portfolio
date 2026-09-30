@@ -1,22 +1,14 @@
 'use client'
 
+import { DEFAULT_POSITIONS, type EditablePosition } from '@/lib/portfolio-data'
+
+export type { EditablePosition }
+
 // Editable positions stored in localStorage
 // ppc = purchase price in USD per CEDEAR lámina
 // cost_USD = quantity × ppc
 // currentValue_USD = quantity × priceBYMA_USD   (ratio=1 since BYMA D tickers give per-lámina USD directly)
 // CCL implícito = arsPrice / priceBYMA_USD
-
-export interface EditablePosition {
-  ticker: string       // CEDEAR ticker (e.g. "PAMP")
-  tickerYF: string     // Yahoo Finance ticker — BYMA USD market (e.g. "PAMPD.BA")
-  name: string
-  sector: string
-  ratio: number        // kept=1 for all; BYMA D-class tickers are already USD per lámina
-  quantity: number     // Total CEDEAR láminas held
-  ppc: number          // Purchase price in USD per CEDEAR lámina
-  account: 'Lucio' | 'Agro' | 'Consolidado'
-  targetPct?: number   // Target allocation % for rebalancing
-}
 
 export interface ArsPrice {
   ticker: string
@@ -26,26 +18,6 @@ export interface ArsPrice {
 
 export const POSITIONS_KEY = 'cedear_positions_v13'  // v13: full resync — exit META & TSLA; Agro rework (BRKB 849, GOGL 486, MCD 549, MSFT 183, NU 689, NVDA 344, PEP 1245)
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
-
-// Real positions — Balanz Lucio + Balanz Agropecuaria
-// tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
-// ratio=1 for all: currentValue = quantity × priceBYMA_USD
-const DEFAULT_POSITIONS: EditablePosition[] = [
-  // ── Balanz Lucio ──────────────────────────────────────────────────────────
-  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
-  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 1323, ppc: 7.43,   account: 'Lucio' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 925,  ppc: 3.34,   account: 'Lucio' },
-  // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.37, account: 'Agro' },
-  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.98,   account: 'Agro' },
-  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.00,  account: 'Agro' },
-  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.61,  account: 'Agro' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.68,  account: 'Agro' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.17,   account: 'Agro' },
-  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.31,   account: 'Agro' },
-  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.99,   account: 'Agro' },
-]
 
 export function loadPositions(): EditablePosition[] {
   if (typeof window === 'undefined') return DEFAULT_POSITIONS
