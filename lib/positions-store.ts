@@ -24,7 +24,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v12'  // v12: sync Lucio — NU 1323 @ 7.43, PAMP 925, exit TSLA
+export const POSITIONS_KEY = 'cedear_positions_v13'  // v13: full resync — exit META & TSLA; Agro rework (BRKB 849, GOGL 486, MCD 549, MSFT 183, NU 689, NVDA 344, PEP 1245)
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 // Real positions — Balanz Lucio + Balanz Agropecuaria
@@ -34,19 +34,17 @@ const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
-  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 932,  ppc: 26.79,  account: 'Lucio' },
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 1323, ppc: 7.43,   account: 'Lucio' },
   { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 925,  ppc: 3.34,   account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 581, ppc: 24.47, account: 'Agro' },
-  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 886,  ppc: 4.98,   account: 'Agro' },
+  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.37, account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.98,   account: 'Agro' },
   { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.00,  account: 'Agro' },
-  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 235,  ppc: 13.40,  account: 'Agro' },
-  { ticker: 'META',  tickerYF: 'METAD.BA',  name: 'Meta Platforms',  sector: 'Tecnología', ratio: 1, quantity: 184,  ppc: 26.43,  account: 'Agro' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 333,  ppc: 14.70,  account: 'Agro' },
-  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 644,  ppc: 7.31,   account: 'Agro' },
-  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 641,  ppc: 8.43,   account: 'Agro' },
-  { ticker: 'TSLA',  tickerYF: 'TSLAD.BA',  name: 'Tesla',           sector: 'Tecnología', ratio: 1, quantity: 196,  ppc: 21.64,  account: 'Agro' },
+  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.61,  account: 'Agro' },
+  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.68,  account: 'Agro' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.17,   account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.31,   account: 'Agro' },
+  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.99,   account: 'Agro' },
 ]
 
 export function loadPositions(): EditablePosition[] {
