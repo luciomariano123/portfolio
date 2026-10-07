@@ -16,7 +16,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v13'  // v13: full resync — exit META & TSLA; Agro rework (BRKB 849, GOGL 486, MCD 549, MSFT 183, NU 689, NVDA 344, PEP 1245)
+export const POSITIONS_KEY = 'cedear_positions_v14'  // v14: Lucio NU 1323→705, exit PAMP
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 export function loadPositions(): EditablePosition[] {

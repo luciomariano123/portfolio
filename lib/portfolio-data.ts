@@ -18,15 +18,14 @@ export interface EditablePosition {
   targetPct?: number   // Target allocation % for rebalancing
 }
 
-// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 26/09/2026)
+// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 07/10/2026)
 // tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
 export const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
   { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 1323, ppc: 7.43,   account: 'Lucio' },
-  { ticker: 'PAMP',  tickerYF: 'PAMPD.BA',  name: 'Pampa Energía',   sector: 'Energía',    ratio: 1, quantity: 925,  ppc: 3.34,   account: 'Lucio' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 705,  ppc: 7.43,   account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
   { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.37, account: 'Agro' },
   { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.98,   account: 'Agro' },
@@ -67,9 +66,9 @@ export interface HistoricalPoint {
   variacion?: number
 }
 
-// Cash positions (Excel CONSOLIDADO "Liquidez", 26/09/2026)
+// Cash positions (Excel CONSOLIDADO "Liquidez", 07/10/2026)
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 98889, account: 'Lucio' },
+  { currency: 'USD', amount: 106871, account: 'Lucio' },
   { currency: 'USD', amount: 7688,  account: 'Agro'  },
 ]
 
