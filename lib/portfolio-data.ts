@@ -5,6 +5,7 @@
 // Only nominals / PPC / cash / history come from the Excel; market prices are live.
 
 import { DEFAULT_ON_PRICES } from '@/lib/on-prices'
+import { todayISO } from '@/lib/utils'
 
 export interface EditablePosition {
   ticker: string       // CEDEAR ticker (e.g. "PAMP")
@@ -18,23 +19,24 @@ export interface EditablePosition {
   targetPct?: number   // Target allocation % for rebalancing
 }
 
-// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 07/10/2026)
+// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 30/10/2026)
 // tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
+// ppc = USD invested / láminas, at 4 decimals so cost matches the Excel
 export const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
-  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.31,  account: 'Lucio' },
-  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.70,  account: 'Lucio' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 705,  ppc: 7.43,   account: 'Lucio' },
+  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.2902, account: 'Lucio' },
+  { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.6998, account: 'Lucio' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 705,  ppc: 7.4270,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
-  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.37, account: 'Agro' },
-  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.98,   account: 'Agro' },
-  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 15.00,  account: 'Agro' },
-  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.61,  account: 'Agro' },
-  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.68,  account: 'Agro' },
-  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.17,   account: 'Agro' },
-  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.31,   account: 'Agro' },
-  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.99,   account: 'Agro' },
+  { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.3746, account: 'Agro' },
+  { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.9806,  account: 'Agro' },
+  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 14.9272, account: 'Agro' },
+  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.6102, account: 'Agro' },
+  { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.6831, account: 'Agro' },
+  { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.1669,  account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.2936,  account: 'Agro' },
+  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.9582,  account: 'Agro' },
 ]
 
 export interface CashPosition {
@@ -66,10 +68,24 @@ export interface HistoricalPoint {
   variacion?: number
 }
 
-// Cash positions (Excel CONSOLIDADO "Liquidez", 07/10/2026)
+// Cash positions (Excel CONSOLIDADO "Liquidez", 30/10/2026)
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 106871, account: 'Lucio' },
-  { currency: 'USD', amount: 7688,  account: 'Agro'  },
+  { currency: 'USD', amount: 26871, account: 'Lucio' },
+  { currency: 'USD', amount: 8983,  account: 'Agro'  },
+]
+
+// Plazos fijos en USD — accrue simple interest day by day until maturity
+export interface TermDeposit {
+  name: string
+  principal: number    // USD
+  rate: number         // TNA as a fraction (0.05 = 5%)
+  start: string        // YYYY-MM-DD (constitución)
+  maturity: string     // YYYY-MM-DD (vencimiento)
+  account: 'Lucio' | 'Agro'
+}
+
+export const TERM_DEPOSITS: TermDeposit[] = [
+  { name: 'Plazo Fijo BBVA', principal: 80000, rate: 0.05, start: '2026-10-28', maturity: '2027-01-26', account: 'Lucio' },
 ]
 
 // Fixed Income — Obligaciones Negociables (todas en Agro)
@@ -123,8 +139,8 @@ export const COUPON_SCHEDULE: CouponPayment[] = [
 ]
 
 // Historical evolution from the "Evolucion GRAFICO" sheet (weekly snapshots)
-// Values = total portfolio in USD (CEDEARs + cash USD + ONs)
-// Start: Oct 1, 2024 (initial capital 200,500) — End: Sep 18, 2026
+// Values = total portfolio in USD (CEDEARs + cash USD + ONs + plazo fijo)
+// Start: Oct 1, 2024 (initial capital 200,500) — End: Oct 30, 2026
 export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2024-10-01', quotaPart: 200500.00 },
   { date: '2024-10-13', quotaPart: 201958.13 },
@@ -208,6 +224,13 @@ export const HISTORICAL_DATA: HistoricalPoint[] = [
   { date: '2026-09-05', quotaPart: 274984.76 },
   { date: '2026-09-12', quotaPart: 275979.96 },
   { date: '2026-09-18', quotaPart: 275369.75 },
+  { date: '2026-09-26', quotaPart: 277001.44 },
+  { date: '2026-10-03', quotaPart: 276306.85 },
+  { date: '2026-10-06', quotaPart: 279690.70 },
+  { date: '2026-10-09', quotaPart: 281042.72 },
+  { date: '2026-10-17', quotaPart: 281008.76 },
+  { date: '2026-10-24', quotaPart: 282688.24 },
+  { date: '2026-10-30', quotaPart: 279530.88 },
 ]
 
 export const SECTOR_COLORS: Record<string, string> = {
@@ -217,6 +240,7 @@ export const SECTOR_COLORS: Record<string, string> = {
   'Consumo': '#ec4899',
   'ETF': '#8b5cf6',
   'Renta Fija': '#06b6d4',
+  'Plazo Fijo': '#84cc16',
   'Efectivo': '#64748b',
 }
 
@@ -252,9 +276,33 @@ export function fixedIncomeValue(
     .reduce((s, fi) => s + fi.nominal * (onPrices[fi.onTicker] ?? 1), 0)
 }
 
-/** Whole portfolio in USD: CEDEARs at live prices + cash USD + ONs at market. */
+const DAY_MS = 86_400_000
+const isoToUTC = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10))
+
+/** Days elapsed since constitución, capped at maturity (same as the Excel's MAX(0, MIN(TODAY(), vto) - constitución)). */
+export function termDepositDays(td: TermDeposit, asOf: string = todayISO()): number {
+  const end = Math.min(isoToUTC(asOf), isoToUTC(td.maturity))
+  return Math.max(0, Math.round((end - isoToUTC(td.start)) / DAY_MS))
+}
+
+export function termDepositTermDays(td: TermDeposit): number {
+  return Math.round((isoToUTC(td.maturity) - isoToUTC(td.start)) / DAY_MS)
+}
+
+/** Principal + interest accrued day by day: principal × (1 + TNA × días / 365). */
+export function termDepositValue(td: TermDeposit, asOf: string = todayISO()): number {
+  return td.principal * (1 + td.rate * termDepositDays(td, asOf) / 365)
+}
+
+export function termDepositsValue(account: AccountFilter = 'all', asOf: string = todayISO()): number {
+  return TERM_DEPOSITS
+    .filter(td => account === 'all' || td.account === account)
+    .reduce((s, td) => s + termDepositValue(td, asOf), 0)
+}
+
+/** Whole portfolio in USD: CEDEARs at live prices + cash USD + ONs at market + plazos fijos accrued. */
 export function totalPortfolioValue(cedearValue: number, onPrices?: Record<string, number>): number {
-  return cedearValue + cashUSD() + fixedIncomeValue(onPrices)
+  return cedearValue + cashUSD() + fixedIncomeValue(onPrices) + termDepositsValue()
 }
 
 /** Last snapshot on or before Dec 31 of the previous year — the YTD baseline. */

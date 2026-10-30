@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatPercent, formatNumber, getPnlColor } from '@/lib/utils'
 import { computeTotalPortfolioValue, saveTodaySnapshot } from '@/lib/history-store'
-import { SECTOR_COLORS, FIXED_INCOME, cashUSD as accountCashUSD, fixedIncomeValue } from '@/lib/portfolio-data'
+import { SECTOR_COLORS, FIXED_INCOME, TERM_DEPOSITS, cashUSD as accountCashUSD, fixedIncomeValue, termDepositValue } from '@/lib/portfolio-data'
 import { loadOnPrices } from '@/lib/on-prices'
 import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 import {
@@ -167,12 +167,14 @@ export default function PortfolioPage() {
   const onPrices = useMemo(() => loadOnPrices(), [])
   const accountCash = accountCashUSD(acct)
   const accountOns  = fixedIncomeValue(onPrices, acct)
+  const accountTermDeposits = TERM_DEPOSITS.filter(td => acct === 'all' || td.account === acct)
+  const accountPF   = accountTermDeposits.reduce((s, td) => s + termDepositValue(td), 0)
 
   // Total real portfolio value for the selected account (CEDEARs + cash + ONs)
-  const totalPortfolio = summary.totalValue + accountCash + accountOns
+  const totalPortfolio = summary.totalValue + accountCash + accountOns + accountPF
 
   // Weights are over the whole (filtered) portfolio, like "% CARTERA" in the Excel
-  const weightBase = totalValue + accountCash + accountOns
+  const weightBase = totalValue + accountCash + accountOns + accountPF
 
   // Auto-save daily snapshot once prices are loaded — consolidated view only
   const snapshotSavedRef = useRef(false)
@@ -419,6 +421,48 @@ export default function PortfolioPage() {
                     )
                   })()}
 
+                  {/* Plazo fijo rows */}
+                  {accountTermDeposits.map(td => {
+                    const value   = termDepositValue(td)
+                    const accrued = value - td.principal
+                    const weight  = weightBase > 0 ? (value / weightBase) * 100 : 0
+                    return (
+                      <tr key={`${td.name}-${td.start}`} className="bg-lime-500/5 border-t border-lime-500/20">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-lime-500/15 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-lime-400">PF</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-100">{td.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {formatCurrency(td.principal)} · {(td.rate * 100).toFixed(1)}% TNA · vto {td.maturity.split('-').reverse().join('/')}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border text-lime-400 bg-lime-500/10 border-lime-500/20">
+                            Plazo Fijo
+                          </span>
+                        </td>
+                        <td colSpan={4} className="py-3 px-3 text-slate-500">—</td>
+                        <td className="py-3 px-3 font-mono text-slate-100 font-medium">{formatCurrency(value)}</td>
+                        <td className="py-3 px-3 font-mono text-emerald-400">+{formatCurrency(accrued)}</td>
+                        <td className="py-3 px-3 font-mono text-xs text-emerald-400">+{((accrued / td.principal) * 100).toFixed(2)}%</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2 w-24">
+                            <div className="flex-1 h-1.5 bg-slate-700 rounded-full">
+                              <div className="h-full bg-lime-500 rounded-full" style={{ width: `${Math.min(weight, 100)}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono w-9 text-right">{weight.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td />
+                      </tr>
+                    )
+                  })}
+
                   {/* Cash row */}
                   {(() => {
                     const cashUSD = accountCash
@@ -562,7 +606,7 @@ export default function PortfolioPage() {
               <CardTitle className="text-base">Composición de cartera</CardTitle>
             </CardHeader>
             <CardContent>
-              <TenenciaBreakdown cedears={summary.totalValue} cash={cashVal} fi={fiVal} loading={loading} />
+              <TenenciaBreakdown cedears={summary.totalValue} cash={cashVal} fi={fiVal} pf={accountPF} loading={loading} />
             </CardContent>
           </Card>
         )

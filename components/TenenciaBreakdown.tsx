@@ -6,16 +6,19 @@ interface Props {
   cedears: number
   cash: number
   fi: number
+  pf?: number
   loading?: boolean
 }
 
-export function TenenciaBreakdown({ cedears, cash, fi, loading }: Props) {
-  const total = cedears + fi + cash
+export function TenenciaBreakdown({ cedears, cash, fi, pf = 0, loading }: Props) {
+  const total = cedears + fi + pf + cash
   const groups = [
     { label: 'Renta variable', sub: 'CEDEARs', value: cedears, dot: 'bg-indigo-500' },
     { label: 'Renta fija',     sub: 'ONs a precio de mercado', value: fi, dot: 'bg-cyan-500' },
+    { label: 'Plazo fijo',     sub: 'Capital + interés devengado', value: pf, dot: 'bg-lime-500' },
     { label: 'Liquidez',       sub: 'Efectivo USD', value: cash, dot: 'bg-slate-400' },
-  ].map(g => ({ ...g, pct: total > 0 ? (g.value / total) * 100 : 0 }))
+  ].filter(g => g.value > 0 || g.label === 'Renta variable')  // hide empty buckets (e.g. no ONs in Lucio)
+   .map(g => ({ ...g, pct: total > 0 ? (g.value / total) * 100 : 0 }))
 
   const fmt = (n: number) => loading ? '—' : formatCurrency(n)
   const pct = (n: number) => loading ? '—' : n.toFixed(1) + '%'

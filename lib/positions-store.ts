@@ -16,7 +16,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v14'  // v14: Lucio NU 1323→705, exit PAMP
+export const POSITIONS_KEY = 'cedear_positions_v15'  // v15: exact PPCs from Excel 30/10/2026 (SPY, KO, PEP, NVDA, GOGL adjusted)
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 export function loadPositions(): EditablePosition[] {

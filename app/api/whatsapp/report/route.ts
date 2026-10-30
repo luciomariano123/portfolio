@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
-import { DEFAULT_POSITIONS, HISTORICAL_DATA, COUPON_SCHEDULE, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
+import { DEFAULT_POSITIONS, HISTORICAL_DATA, COUPON_SCHEDULE, cashUSD as totalCashUSD, fixedIncomeValue, termDepositsValue, yearStartValue } from '@/lib/portfolio-data'
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
@@ -148,7 +148,10 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
   // ONs at default market prices (server can't read the user's saved ON prices)
   const onValue = fixedIncomeValue()
 
-  const totalComplete = total + cashUSD + onValue
+  // Plazos fijos at principal + interest accrued to date
+  const pfValue = termDepositsValue()
+
+  const totalComplete = total + cashUSD + onValue + pfValue
 
   // YTD: last Dec 31 of previous year
   const now = new Date()
@@ -198,7 +201,8 @@ function formatReport(prices: PriceInfo[], options: FormatReportOptions = {}): s
   msg += `💼 *Valor Total: $${fmt(totalComplete)}*\n`
   msg += `  ├ CEDEARs:  $${fmt(total)}\n`
   msg += `  ├ Cash USD:  $${fmt(cashUSD)}\n`
-  msg += `  └ ONs (VN):  $${fmt(onValue)}\n\n`
+  if (pfValue > 0) msg += `  ├ Plazo fijo:  $${fmt(pfValue)}\n`
+  msg += `  └ ONs:  $${fmt(onValue)}\n\n`
 
   // CCL Implícito
   if (ccl > 0) {

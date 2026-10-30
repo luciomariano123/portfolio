@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { usePrices } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { COUPON_SCHEDULE, SECTOR_COLORS, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
+import { COUPON_SCHEDULE, SECTOR_COLORS, cashUSD as totalCashUSD, fixedIncomeValue, termDepositsValue, yearStartValue } from '@/lib/portfolio-data'
 import { loadOnPrices } from '@/lib/on-prices'
 import { formatCurrency, formatPercent, getPnlColor, getPnlBg } from '@/lib/utils'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
@@ -105,7 +105,8 @@ export default function AnalysisPage() {
   const cashUSD = totalCashUSD()
   const onValue = fixedIncomeValue(loadOnPrices())
   const cedearTotal = posMetrics.reduce((s, p) => s + p.value, 0)
-  const grandTotal = cedearTotal + cashUSD + onValue
+  const pfValue = termDepositsValue()
+  const grandTotal = cedearTotal + cashUSD + onValue + pfValue
 
   const cashPct = grandTotal > 0 ? (cashUSD / grandTotal) * 100 : 0
   const onPct = grandTotal > 0 ? (onValue / grandTotal) * 100 : 0

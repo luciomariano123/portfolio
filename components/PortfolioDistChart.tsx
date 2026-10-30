@@ -10,6 +10,7 @@ const SECTOR_PALETTE: Record<string, string[]> = {
   'ETF':        ['#8b5cf6', '#a78bfa', '#7c3aed', '#6d28d9'],
   'Financiero': ['#10b981', '#34d399', '#059669', '#047857'],
   'Renta Fija': ['#06b6d4', '#22d3ee', '#0891b2'],
+  'Plazo Fijo': ['#84cc16', '#a3e635', '#65a30d'],
   'Efectivo':   ['#64748b', '#94a3b8'],
 }
 

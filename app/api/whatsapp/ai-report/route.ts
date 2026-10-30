@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
-import { DEFAULT_POSITIONS, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue, type EditablePosition } from '@/lib/portfolio-data'
+import { DEFAULT_POSITIONS, cashUSD as totalCashUSD, fixedIncomeValue, termDepositsValue, yearStartValue, type EditablePosition } from '@/lib/portfolio-data'
 
 type WPos = EditablePosition
 
@@ -87,7 +87,8 @@ function generateSummary(priceData: PriceRow[], news: NewsItem[]): string {
   const totalCEDEAR = priceData.reduce((s, p) => s + p.value, 0)
   const cashUSD     = totalCashUSD()
   const onValue     = fixedIncomeValue()
-  const total       = totalCEDEAR + cashUSD + onValue
+  const pfValue     = termDepositsValue()
+  const total       = totalCEDEAR + cashUSD + onValue + pfValue
 
   const dailyPnl    = priceData.reduce((s, p) => s + p.change * (p.price > 0 ? p.value / p.price : 0), 0)
   const dailyPnlPct = totalCEDEAR > 0 ? (dailyPnl / (totalCEDEAR - dailyPnl)) * 100 : 0

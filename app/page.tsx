@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { usePrices, useDolar } from '@/hooks/usePrices'
 import { usePositions } from '@/hooks/usePositions'
-import { CASH_POSITIONS, FIXED_INCOME, PORTFOLIO_START, annualTarget, cashUSD as totalCashUSD, fixedIncomeValue, yearStartValue } from '@/lib/portfolio-data'
+import { CASH_POSITIONS, FIXED_INCOME, PORTFOLIO_START, annualTarget, cashUSD as totalCashUSD, fixedIncomeValue, termDepositsValue, yearStartValue } from '@/lib/portfolio-data'
 import { loadOnPrices } from '@/lib/on-prices'
 import { SummaryCards } from '@/components/SummaryCards'
 import { EvolutionChart } from '@/components/EvolutionChart'
@@ -15,6 +15,7 @@ import { loadRecentChanges, formatChangesForMessage } from '@/lib/changes-store'
 import { TenenciaBreakdown } from '@/components/TenenciaBreakdown'
 import { PortfolioDistChart, type DistItem } from '@/components/PortfolioDistChart'
 import { TargetProgress } from '@/components/TargetProgress'
+import { TermDepositList } from '@/components/TermDepositList'
 
 export default function DashboardPage() {
   const { consolidated: positions, mounted } = usePositions()
@@ -81,10 +82,11 @@ export default function DashboardPage() {
 
     const cashUSD = totalCashUSD()
     const fiValue = fixedIncomeValue(onPrices)
+    const pfValue = termDepositsValue()
 
-    const totalWithCash = totalValueUSD + cashUSD + fiValue
+    const totalWithCash = totalValueUSD + cashUSD + fiValue + pfValue
     const dailyPnlUSD = totalValueUSD - prevDayValueUSD
-    // Daily move as % of the whole portfolio (cash and ONs don't move intraday)
+    // Daily move as % of the whole portfolio (cash, ONs and plazo fijo don't move intraday)
     const prevTotal = totalWithCash - dailyPnlUSD
     const dailyPnlPct = prevTotal > 0 ? (dailyPnlUSD / prevTotal) * 100 : 0
     // Total P&L since inception (realized + unrealized), as in the Excel "Ganancia total"
@@ -112,7 +114,7 @@ export default function DashboardPage() {
       changePercent: v.changePercent,
     }))
 
-    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, unrealizedUSD, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue, dailyBreakdown }
+    return { totalValueUSD: totalWithCash, totalCostUSD, totalPnlUSD, totalPnlPct, unrealizedUSD, dailyPnlUSD, dailyPnlPct, cedearValue: totalValueUSD, cashUSD, fiValue, pfValue, dailyBreakdown }
   }, [positions, prices, onPrices])
 
   const movers = useMemo(() => {
@@ -140,8 +142,9 @@ export default function DashboardPage() {
 
   const sectorExtra = useMemo(() => [
     { sector: 'Renta Fija', value: stats.fiValue },
+    { sector: 'Plazo Fijo', value: stats.pfValue },
     { sector: 'Efectivo', value: stats.cashUSD },
-  ], [stats.fiValue, stats.cashUSD])
+  ], [stats.fiValue, stats.pfValue, stats.cashUSD])
 
   const distItems = useMemo<DistItem[]>(() => {
     const items: DistItem[] = positions
@@ -157,8 +160,9 @@ export default function DashboardPage() {
       })
     if (stats.cashUSD > 0) items.push({ label: 'Cash', sublabel: 'Efectivo USD', value: stats.cashUSD, sector: 'Efectivo' })
     if (stats.fiValue > 0) items.push({ label: 'ONs', sublabel: 'Renta Fija', value: stats.fiValue, sector: 'Renta Fija' })
+    if (stats.pfValue > 0) items.push({ label: 'PF', sublabel: 'Plazo Fijo', value: stats.pfValue, sector: 'Plazo Fijo' })
     return items
-  }, [positions, prices, stats.cashUSD, stats.fiValue])
+  }, [positions, prices, stats.cashUSD, stats.fiValue, stats.pfValue])
 
   if (!mounted) return null
 
@@ -275,6 +279,7 @@ export default function DashboardPage() {
               cedears={stats.cedearValue}
               cash={stats.cashUSD}
               fi={stats.fiValue}
+              pf={stats.pfValue}
               loading={loading}
             />
           </CardContent>
@@ -318,7 +323,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Efectivo y Renta Fija</CardTitle>
+            <CardTitle className="text-base">Efectivo, Plazo Fijo y ONs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -335,6 +340,10 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 ))}
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-1">Plazo Fijo</p>
+                <TermDepositList />
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Obligaciones Negociables</p>

@@ -74,10 +74,9 @@ export function EvolutionChart({ liveValue }: { liveValue?: number }) {
 
   const dataWithLive = useMemo(() => {
     if (!liveValue || liveValue <= 0) return HISTORICAL_DATA
+    // Today's point is always the live value (replaces an Excel snapshot taken today)
     const today = todayISO()
-    const last = HISTORICAL_DATA[HISTORICAL_DATA.length - 1]
-    if (last?.date === today) return HISTORICAL_DATA
-    return [...HISTORICAL_DATA, { date: today, quotaPart: liveValue }]
+    return [...HISTORICAL_DATA.filter(d => d.date !== today), { date: today, quotaPart: liveValue }]
   }, [liveValue])
 
   const filteredData = useMemo(() => filterByRange(dataWithLive, range), [dataWithLive, range])

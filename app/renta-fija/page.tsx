@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState, useCallback } from 'react'
 import { FIXED_INCOME, COUPON_SCHEDULE } from '@/lib/portfolio-data'
 import { ON_PRICES_KEY, DEFAULT_ON_PRICES, loadOnPrices } from '@/lib/on-prices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TermDepositList } from '@/components/TermDepositList'
 import { formatCurrency } from '@/lib/utils'
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle2, Tag, Pencil, Save } from 'lucide-react'
 
@@ -80,7 +81,7 @@ export default function RentaFijaPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Renta Fija</h1>
         <p className="text-slate-400 text-sm mt-0.5">
-          Obligaciones Negociables — cronograma de cupones y posiciones
+          Plazos fijos y Obligaciones Negociables — devengamiento, cupones y posiciones
         </p>
       </div>
 
@@ -117,6 +118,16 @@ export default function RentaFijaPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Plazo fijo */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Plazo Fijo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TermDepositList />
+        </CardContent>
+      </Card>
 
       {/* ONs table */}
       <Card>
