@@ -19,24 +19,25 @@ export interface EditablePosition {
   targetPct?: number   // Target allocation % for rebalancing
 }
 
-// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel CONSOLIDADO, 30/10/2026)
+// Real positions — Balanz Lucio + Balanz Agropecuaria (Excel BALANZ LUCIO / BALANZ AGRO, 20/11/2026)
 // tickerYF uses BYMA USD D-class tickers (e.g. PAMPD.BA) — price returned IS USD per lámina
 // ratio=1 for all: currentValue = quantity × priceBYMA_USD
 // ppc = USD invested / láminas, at 4 decimals so cost matches the Excel
 export const DEFAULT_POSITIONS: EditablePosition[] = [
   // ── Balanz Lucio ──────────────────────────────────────────────────────────
-  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2019, ppc: 11.2902, account: 'Lucio' },
+  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 2763, ppc: 11.8078, account: 'Lucio' },
+  { ticker: 'QQQ',   tickerYF: 'QQQD.BA',   name: 'Nasdaq 100 ETF',  sector: 'ETF',        ratio: 1, quantity: 140,  ppc: 35.1500, account: 'Lucio' },
   { ticker: 'MELI',  tickerYF: 'MELID.BA',  name: 'MercadoLibre',    sector: 'Tecnología', ratio: 1, quantity: 553,  ppc: 17.6998, account: 'Lucio' },
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 705,  ppc: 7.4270,  account: 'Lucio' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 1982, ppc: 6.4586,  account: 'Lucio' },
   // ── Balanz Agropecuaria ───────────────────────────────────────────────────
+  { ticker: 'SPY',   tickerYF: 'SPYD.BA',   name: 'S&P 500 ETF',     sector: 'ETF',        ratio: 1, quantity: 1364, ppc: 12.5081, account: 'Agro' },
+  { ticker: 'QQQ',   tickerYF: 'QQQD.BA',   name: 'Nasdaq 100 ETF',  sector: 'ETF',        ratio: 1, quantity: 54,   ppc: 33.1111, account: 'Agro' },
   { ticker: 'BRKB',  tickerYF: 'BRKBD.BA',  name: 'Berkshire Hathaway', sector: 'Financiero', ratio: 1, quantity: 849, ppc: 24.3746, account: 'Agro' },
   { ticker: 'GOGL',  tickerYF: 'GOGLD.BA',  name: 'Google',          sector: 'Tecnología', ratio: 1, quantity: 486,  ppc: 4.9806,  account: 'Agro' },
-  { ticker: 'KO',    tickerYF: 'KOD.BA',    name: 'Coca-Cola',       sector: 'Consumo',    ratio: 1, quantity: 316,  ppc: 14.9272, account: 'Agro' },
-  { ticker: 'MCD',   tickerYF: 'MCDD.BA',   name: "McDonald's",      sector: 'Consumo',    ratio: 1, quantity: 549,  ppc: 11.6102, account: 'Agro' },
   { ticker: 'MSFT',  tickerYF: 'MSFTD.BA',  name: 'Microsoft',       sector: 'Tecnología', ratio: 1, quantity: 183,  ppc: 14.6831, account: 'Agro' },
   { ticker: 'NU',    tickerYF: 'NUD.BA',    name: 'Nu Holdings',     sector: 'Financiero', ratio: 1, quantity: 689,  ppc: 7.1669,  account: 'Agro' },
-  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 344,  ppc: 7.2936,  account: 'Agro' },
-  { ticker: 'PEP',   tickerYF: 'PEPD.BA',   name: 'PepsiCo',         sector: 'Consumo',    ratio: 1, quantity: 1245, ppc: 7.9582,  account: 'Agro' },
+  { ticker: 'NVDA',  tickerYF: 'NVDAD.BA',  name: 'NVIDIA',          sector: 'Tecnología', ratio: 1, quantity: 1273, ppc: 6.3747,  account: 'Agro' },
 ]
 
 export interface CashPosition {
@@ -68,10 +69,10 @@ export interface HistoricalPoint {
   variacion?: number
 }
 
-// Cash positions (Excel CONSOLIDADO "Liquidez", 30/10/2026)
+// Cash positions (Excel BALANZ LUCIO / BALANZ AGRO "Liquidez", 20/11/2026)
 export const CASH_POSITIONS: CashPosition[] = [
-  { currency: 'USD', amount: 26871, account: 'Lucio' },
-  { currency: 'USD', amount: 8983,  account: 'Agro'  },
+  { currency: 'USD', amount: 147.50,  account: 'Lucio' },
+  { currency: 'USD', amount: 8407.60, account: 'Agro'  },
 ]
 
 // Plazos fijos en USD — accrue simple interest day by day until maturity

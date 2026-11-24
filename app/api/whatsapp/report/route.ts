@@ -124,12 +124,8 @@ async function fetchNews(tickers: string[]): Promise<string[]> {
 
 // ── Message formatter ────────────────────────────────────────────────────────
 
-const SECTOR_MAP: Record<string, string> = {
-  'AMZN': 'Tecnología', 'MELI': 'Tecnología', 'META': 'Tecnología', 'MSFT': 'Tecnología',
-  'PLTR': 'Tecnología', 'TSLA': 'Tecnología', 'SPY': 'ETF',
-  'PAMP': 'Energía', 'TGSU2': 'Energía', 'YPF': 'Energía',
-  'KO': 'Consumo', 'MCD': 'Consumo', 'PEP': 'Consumo',
-}
+// Sector per ticker, from the shared positions (stays in sync when positions change)
+const SECTOR_MAP: Record<string, string> = Object.fromEntries(DEFAULT_POSITIONS.map(p => [p.ticker, p.sector]))
 
 interface FormatReportOptions {
   ccl?: number

@@ -16,7 +16,7 @@ export interface ArsPrice {
   updatedAt: string
 }
 
-export const POSITIONS_KEY = 'cedear_positions_v15'  // v15: exact PPCs from Excel 30/10/2026 (SPY, KO, PEP, NVDA, GOGL adjusted)
+export const POSITIONS_KEY = 'cedear_positions_v16'  // v16: Excel 20/11/2026 — buy SPY/NVDA/QQQ both accounts, exit KO/MCD/PEP (Agro)
 const ARS_PRICES_KEY = 'cedear_ars_prices_v2'
 
 export function loadPositions(): EditablePosition[] {
